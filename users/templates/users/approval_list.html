@@ -1,0 +1,531 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Εκκρεμείς Εγκρίσεις - Σύστημα Αδειών ΠΔΕΔΕ{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-clipboard-check"></i> Εκκρεμείς Εγκρίσεις
+            {% if pending_approvals.paginator.count %}
+                <span class="badge bg-warning ms-2">{{ pending_approvals.paginator.count }}</span>
+            {% endif %}
+        </h2>
+        <p class="text-muted">Διαχειριστείτε τις αιτήσεις άδειας που απαιτούν έγκριση</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <div class="dropdown d-inline">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-funnel"></i> Φίλτρα
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="?filter=all">Όλες οι εκκρεμείς</a></li>
+                <li><a class="dropdown-item" href="?filter=urgent">Επείγουσες</a></li>
+                <li><a class="dropdown-item" href="?filter=today">Σήμερα</a></li>
+                <li><a class="dropdown-item" href="?filter=week">Αυτή την εβδομάδα</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="bi bi-hourglass-split display-6 text-warning"></i>
+                <h5 class="mt-2">{{ total_pending }}</h5>
+                <small class="text-muted">Συνολικές Εκκρεμείς</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle display-6 text-danger"></i>
+                <h5 class="mt-2">{{ urgent_count|default:0 }}</h5>
+                <small class="text-muted">Επείγουσες</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="bi bi-calendar-today display-6 text-info"></i>
+                <h5 class="mt-2">{{ today_submissions|default:0 }}</h5>
+                <small class="text-muted">Υποβολές Σήμερα</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="bi bi-clock-history display-6 text-success"></i>
+                <h5 class="mt-2">{{ avg_response_time|default:"N/A" }}</h5>
+                <small class="text-muted">Μέσος Χρόνος Απάντησης</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightning"></i> Μαζικές Ενέργειες
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" id="bulkActionForm">
+                    {% csrf_token %}
+                    <div class="row align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label">Επιλογή Αιτήσεων</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="selectAll()">
+                                    <i class="bi bi-check-all"></i> Επιλογή όλων
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectNone()">
+                                    <i class="bi bi-x"></i> Καμία επιλογή
+                                </button>
+                                <span class="align-self-center text-muted">
+                                    <span id="selectedCount">0</span> επιλεγμένες
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex gap-2">
+                                <button type="submit" name="bulk_action" value="approve" 
+                                        class="btn btn-success" onclick="return confirmBulkAction('εγκρίνετε')">
+                                    <i class="bi bi-check-circle"></i> Μαζική Έγκριση
+                                </button>
+                                <button type="submit" name="bulk_action" value="reject" 
+                                        class="btn btn-danger" onclick="return confirmBulkAction('απορρίψετε')">
+                                    <i class="bi bi-x-circle"></i> Μαζική Απόρριψη
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-list-check"></i> 
+                    Αιτήσεις προς Έγκριση
+                    {% if pending_approvals.paginator.count %}
+                        ({{ pending_approvals.paginator.count }} αιτήσεις)
+                    {% endif %}
+                </h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-sort-down"></i> Ταξινόμηση
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?sort=date_asc">Ημερομηνία (παλαιότερες)</a></li>
+                        <li><a class="dropdown-item" href="?sort=date_desc">Ημερομηνία (νεότερες)</a></li>
+                        <li><a class="dropdown-item" href="?sort=urgency">Επείγον</a></li>
+                        <li><a class="dropdown-item" href="?sort=department">Τμήμα</a></li>
+                        <li><a class="dropdown-item" href="?sort=duration">Διάρκεια</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if pending_approvals %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="40">
+                                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleAll(this)">
+                                    </th>
+                                    <th>Υπάλληλος</th>
+                                    <th>Τύπος Άδειας</th>
+                                    <th>Ημερομηνίες</th>
+                                    <th>Ημέρες</th>
+                                    <th>Υποβολή</th>
+                                    <th>Επείγον</th>
+                                    <th class="text-center">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in pending_approvals %}
+                                <tr class="approval-row" data-leave-id="{{ leave.id }}">
+                                    <td>
+                                        <input type="checkbox" name="selected_leaves" value="{{ leave.id }}" 
+                                               class="leave-checkbox" onchange="updateSelectedCount()">
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                                 style="width: 32px; height: 32px; font-size: 14px;">
+                                                {{ leave.employee.user.first_name|first|default:leave.employee.user.email|first|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ leave.employee.user.get_full_name|default:leave.employee.user.email }}</div>
+                                                <small class="text-muted">{{ leave.employee.department|default:"Τμήμα" }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if leave.leave_type == 'annual' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-calendar-check"></i> Αναψυχής
+                                            </span>
+                                        {% elif leave.leave_type == 'sick' %}
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-heart-pulse"></i> Ασθενείας
+                                            </span>
+                                        {% elif leave.leave_type == 'maternity' %}
+                                            <span class="badge bg-pink text-white">
+                                                <i class="bi bi-heart"></i> Μητρότητας
+                                            </span>
+                                        {% elif leave.leave_type == 'paternity' %}
+                                            <span class="badge bg-primary">
+                                                <i class="bi bi-person-hearts"></i> Πατρότητας
+                                            </span>
+                                        {% elif leave.leave_type == 'special' %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-star"></i> Ειδική
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ leave.start_date|date:"d/m/Y" }}</div>
+                                        <small class="text-muted">έως {{ leave.end_date|date:"d/m/Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            {{ leave.days_requested }} 
+                                            {% if leave.days_requested == 1 %}ημέρα{% else %}ημέρες{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div>{{ leave.created_at|date:"d/m/Y" }}</div>
+                                        <small class="text-muted">{{ leave.created_at|date:"H:i" }}</small>
+                                        {% if leave.created_at|timesince|slice:":1" == "0" %}
+                                            <span class="badge bg-warning">Νέα</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if leave.start_date|timeuntil|slice:":1" == "0" or leave.start_date|timeuntil|slice:":2" == "-1" %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-exclamation-triangle"></i> Άμεσα
+                                            </span>
+                                        {% elif leave.start_date|timeuntil|slice:":1" <= "3" %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock"></i> Επείγον
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-light text-muted">Κανονικό</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'users:leave_detail' leave.pk %}" 
+                                               class="btn btn-outline-primary" 
+                                               title="Προβολή λεπτομερειών">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-outline-success quick-action-btn"
+                                                    title="Γρήγορη έγκριση"
+                                                    data-leave-id="{{ leave.id }}"
+                                                    data-action="approve">
+                                                <i class="bi bi-check"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger quick-action-btn"
+                                                    title="Γρήγορη απόρριψη"
+                                                    data-leave-id="{{ leave.id }}"
+                                                    data-action="reject">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                            <button type="button" 
+                                                    class="btn btn-outline-warning" 
+                                                    title="Αίτηση διευκρινήσεων"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#clarificationModal{{ leave.id }}">
+                                                <i class="bi bi-question-circle"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Clarification Modal -->
+                                <div class="modal fade" id="clarificationModal{{ leave.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Αίτηση Διευκρινήσεων</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Αίτηση:</strong> {{ leave.employee.user.get_full_name }} - {{ leave.get_leave_type_display }}</p>
+                                                <form method="post" action="#">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="leave_id" value="{{ leave.id }}">
+                                                    <input type="hidden" name="action" value="clarification">
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="clarification_message{{ leave.id }}" class="form-label">
+                                                            Μήνυμα Διευκρινήσεων
+                                                        </label>
+                                                        <textarea class="form-control" 
+                                                                  id="clarification_message{{ leave.id }}"
+                                                                  name="clarification_message" 
+                                                                  rows="4" 
+                                                                  placeholder="Περιγράψτε τι επιπλέον πληροφορίες χρειάζεστε..."
+                                                                  required></textarea>
+                                                    </div>
+                                                    
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                            Ακύρωση
+                                                        </button>
+                                                        <button type="submit" class="btn btn-warning">
+                                                            <i class="bi bi-send"></i> Αποστολή
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if pending_approvals.has_other_pages %}
+                        <div class="card-footer">
+                            <nav aria-label="Σελιδοποίηση εγκρίσεων">
+                                <ul class="pagination pagination-sm justify-content-center mb-0">
+                                    {% if pending_approvals.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1">
+                                                <i class="bi bi-chevron-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ pending_approvals.previous_page_number }}">
+                                                <i class="bi bi-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in pending_approvals.paginator.page_range %}
+                                        {% if pending_approvals.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > pending_approvals.number|add:'-3' and num < pending_approvals.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if pending_approvals.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ pending_approvals.next_page_number }}">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ pending_approvals.paginator.num_pages }}">
+                                                <i class="bi bi-chevron-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            
+                            <div class="text-center mt-2">
+                                <small class="text-muted">
+                                    Σελίδα {{ pending_approvals.number }} από {{ pending_approvals.paginator.num_pages }} 
+                                    ({{ pending_approvals.paginator.count }} συνολικά αποτελέσματα)
+                                </small>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle display-4 text-success"></i>
+                        <h5 class="mt-3 text-muted">Δεν υπάρχουν εκκρεμείς εγκρίσεις</h5>
+                        <p class="text-muted">
+                            Όλες οι αιτήσεις άδειας έχουν επεξεργαστεί.
+                        </p>
+                        <div class="mt-3">
+                            <a href="{% url 'users:dashboard' %}" class="btn btn-primary">
+                                <i class="bi bi-house"></i> Επιστροφή στο Dashboard
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.bg-pink {
+    background-color: #e91e63 !important;
+}
+
+.approval-row:hover {
+    background-color: rgba(0, 123, 255, 0.05) !important;
+}
+
+.leave-checkbox:checked + td {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .table-responsive table {
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedCount = 0;
+
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.leave-checkbox:checked');
+    selectedCount = checkboxes.length;
+    document.getElementById('selectedCount').textContent = selectedCount;
+    
+    // Enable/disable bulk action buttons
+    const bulkButtons = document.querySelectorAll('button[name="bulk_action"]');
+    bulkButtons.forEach(btn => {
+        btn.disabled = selectedCount === 0;
+    });
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.leave-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = true;
+    });
+    document.getElementById('selectAllCheckbox').checked = true;
+    updateSelectedCount();
+}
+
+function selectNone() {
+    const checkboxes = document.querySelectorAll('.leave-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    document.getElementById('selectAllCheckbox').checked = false;
+    updateSelectedCount();
+}
+
+function toggleAll(masterCheckbox) {
+    const checkboxes = document.querySelectorAll('.leave-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = masterCheckbox.checked;
+    });
+    updateSelectedCount();
+}
+
+function confirmBulkAction(action) {
+    if (selectedCount === 0) {
+        alert('Παρακαλώ επιλέξτε τουλάχιστον μία αίτηση.');
+        return false;
+    }
+    
+    return confirm(`Είστε σίγουροι ότι θέλετε να ${action} ${selectedCount} αιτήσεις;`);
+}
+
+function quickAction(leaveId, action) {
+    const actionText = action === 'approve' ? 'εγκρίνετε' : 'απορρίψετε';
+    
+    if (confirm(`Είστε σίγουροι ότι θέλετε να ${actionText} αυτή την αίτηση;`)) {
+        // Create a form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '';
+        
+        // CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        
+        // Leave ID
+        const leaveInput = document.createElement('input');
+        leaveInput.type = 'hidden';
+        leaveInput.name = 'leave_id';
+        leaveInput.value = leaveId;
+        
+        // Action
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'quick_action';
+        actionInput.value = action;
+        
+        form.appendChild(csrfInput);
+        form.appendChild(leaveInput);
+        form.appendChild(actionInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Add event listeners for quick action buttons
+function setupQuickActionButtons() {
+    document.querySelectorAll('.quick-action-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const leaveId = this.getAttribute('data-leave-id');
+            const action = this.getAttribute('data-action');
+            quickAction(leaveId, action);
+        });
+    });
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedCount();
+    setupQuickActionButtons();
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Auto-refresh every 5 minutes for new submissions
+    setInterval(function() {
+        if (document.querySelectorAll('.leave-checkbox:checked').length === 0) {
+            location.reload();
+        }
+    }, 300000); // 5 minutes
+});
+</script>
+{% endblock %}

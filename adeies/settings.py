@@ -105,23 +105,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "adeies.wsgi.application"
 
-# Database - PostgreSQL Configuration
+# Database - SQLite Configuration (for testing)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='adeies_db'),
-        'USER': config('DB_USER', default='adeies_user'),
-        'PASSWORD': config('DB_PASSWORD', default='adeies_password'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'client_encoding': 'UTF8',
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
+# PostgreSQL Configuration (commented out for testing)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('DB_NAME', default='adeies_db'),
+#         'USER': config('DB_USER', default='adeies_user'),
+#         'PASSWORD': config('DB_PASSWORD', default='adeies_password'),
+#         'HOST': config('DB_HOST', default='localhost'),
+#         'PORT': config('DB_PORT', default='5432'),
+#         'OPTIONS': {
+#             'client_encoding': 'UTF8',
+#         },
+#     }
+
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
+
+# Login/Logout URLs
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

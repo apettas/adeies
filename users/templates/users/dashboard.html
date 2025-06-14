@@ -1,0 +1,296 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Dashboard - Σύστημα Αδειών ΠΔΕΔΕ{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-1">
+                            <i class="bi bi-person-circle"></i> 
+                            Καλώς ήρθατε, {{ user.get_full_name|default:user.email }}
+                        </h4>
+                        <p class="mb-0 opacity-75">
+                            <i class="bi bi-building"></i> {{ user.employee.department|default:"Τμήμα" }}
+                            {% if user.employee.position %}
+                                • {{ user.employee.position }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <p class="mb-0">
+                            <i class="bi bi-calendar-date"></i> 
+                            {{ "now"|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leave Balance Cards -->
+<div class="row mb-4">
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-success">
+            <div class="card-body text-center">
+                <div class="text-success mb-2">
+                    <i class="bi bi-calendar-check display-6"></i>
+                </div>
+                <h5 class="card-title">Κανονικές Άδειες</h5>
+                <h3 class="text-success">{{ user.employee.get_leave_balance }}</h3>
+                <small class="text-muted">ημέρες διαθέσιμες</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-warning">
+            <div class="card-body text-center">
+                <div class="text-warning mb-2">
+                    <i class="bi bi-hourglass-split display-6"></i>
+                </div>
+                <h5 class="card-title">Εκκρεμείς Αιτήσεις</h5>
+                <h3 class="text-warning">{{ pending_leaves_count|default:0 }}</h3>
+                <small class="text-muted">προς έγκριση</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card h-100 border-primary">
+            <div class="card-body text-center">
+                <div class="text-primary mb-2">
+                    <i class="bi bi-check-circle display-6"></i>
+                </div>
+                <h5 class="card-title">Εγκεκριμένες Φέτος</h5>
+                <h3 class="text-primary">{{ approved_leaves_count|default:0 }}</h3>
+                <small class="text-muted">ημέρες χρησιμοποιημένες</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i> Γρήγορες Ενέργειες
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <a href="{% url 'users:leave_create' %}" class="btn btn-success w-100 btn-lg">
+                            <i class="bi bi-plus-circle"></i><br>
+                            <span>Νέα Αίτηση Άδειας</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <a href="{% url 'users:leave_list' %}" class="btn btn-primary w-100 btn-lg">
+                            <i class="bi bi-list-ul"></i><br>
+                            <span>Οι Άδειές Μου</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <a href="{% url 'users:profile' %}" class="btn btn-info w-100 btn-lg">
+                            <i class="bi bi-person-gear"></i><br>
+                            <span>Προφίλ</span>
+                        </a>
+                    </div>
+                    {% if pending_approvals %}
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <a href="{% url 'users:approval_list' %}" class="btn btn-warning w-100 btn-lg">
+                            <i class="bi bi-clipboard-check"></i><br>
+                            <span>Εγκρίσεις <span class="badge bg-danger">{{ pending_approvals|length }}</span></span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Leaves and Pending Approvals -->
+<div class="row">
+    <!-- Recent Leaves -->
+    <div class="col-lg-{% if pending_approvals %}6{% else %}12{% endif %} mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Πρόσφατες Άδειες
+                </h5>
+                <a href="{% url 'users:leave_list' %}" class="btn btn-sm btn-outline-primary">
+                    Όλες οι άδειες
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_leaves %}
+                    <div class="list-group list-group-flush">
+                        {% for leave in recent_leaves %}
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        {% if leave.leave_type == 'annual' %}
+                                            <i class="bi bi-calendar-check text-success"></i> Κανονική Άδεια
+                                        {% elif leave.leave_type == 'sick' %}
+                                            <i class="bi bi-heart-pulse text-info"></i> Αναρρωτική άδεια με υπεύθηνη δήλωση
+                                        {% elif leave.leave_type == 'maternity' %}
+                                            <i class="bi bi-heart text-pink"></i> Άδεια Μητρότητας
+                                        {% elif leave.leave_type == 'paternity' %}
+                                            <i class="bi bi-person-hearts text-blue"></i> Άδεια Πατρότητας
+                                        {% elif leave.leave_type == 'special' %}
+                                            <i class="bi bi-star text-warning"></i> Ειδική Άδεια
+                                        {% else %}
+                                            <i class="bi bi-calendar-x text-secondary"></i> {{ leave.get_leave_type_display }}
+                                        {% endif %}
+                                    </h6>
+                                    <p class="mb-1 text-muted">
+                                        <i class="bi bi-calendar-range"></i>
+                                        {{ leave.start_date|date:"d/m/Y" }} - {{ leave.end_date|date:"d/m/Y" }}
+                                        ({{ leave.days_requested }} ημέρες)
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    {% if leave.status == 'pending' %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-hourglass-split"></i> Εκκρεμής
+                                        </span>
+                                    {% elif leave.status == 'approved' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Εγκεκριμένη
+                                        </span>
+                                    {% elif leave.status == 'rejected' %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Απορρίφθηκε
+                                        </span>
+                                    {% endif %}
+                                    <div class="mt-1">
+                                        <a href="{% url 'users:leave_detail' leave.pk %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-calendar-x display-4"></i>
+                        <p class="mt-2">Δεν έχετε καμία άδεια ακόμα</p>
+                        <a href="{% url 'users:leave_create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Δημιουργία πρώτης άδειας
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approvals (for managers) -->
+    {% if pending_approvals %}
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clipboard-check"></i> Εκκρεμείς Εγκρίσεις
+                </h5>
+                <span class="badge bg-warning">{{ pending_approvals|length }}</span>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for leave in pending_approvals %}
+                    <div class="list-group-item border-0 px-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <i class="bi bi-person"></i> {{ leave.employee.user.get_full_name|default:leave.employee.user.email }}
+                                </h6>
+                                <p class="mb-1 text-muted">
+                                    {% if leave.leave_type == 'annual' %}
+                                        <i class="bi bi-calendar-check text-success"></i> Κανονική Άδεια
+                                    {% elif leave.leave_type == 'sick' %}
+                                        <i class="bi bi-heart-pulse text-info"></i> Αναρρωτική άδεια με υπεύθηνη δήλωση
+                                    {% else %}
+                                        <i class="bi bi-calendar"></i> {{ leave.get_leave_type_display }}
+                                    {% endif %}
+                                    <br>
+                                    <i class="bi bi-calendar-range"></i>
+                                    {{ leave.start_date|date:"d/m/Y" }} - {{ leave.end_date|date:"d/m/Y" }}
+                                    ({{ leave.days_requested }} ημέρες)
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <a href="{% url 'users:leave_detail' leave.pk %}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-eye"></i> Έλεγχος
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{% url 'users:approval_list' %}" class="btn btn-outline-primary">
+                        Όλες οι εκκρεμείς εγκρίσεις
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Statistics Summary -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up"></i> Στατιστικά Έτους {{ "now"|date:"Y" }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-primary">{{ total_leaves_this_year|default:0 }}</h4>
+                            <small class="text-muted">Συνολικές Αιτήσεις</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-success">{{ approved_leaves_count|default:0 }}</h4>
+                            <small class="text-muted">Εγκεκριμένες</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-warning">{{ pending_leaves_count|default:0 }}</h4>
+                            <small class="text-muted">Εκκρεμείς</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-info">
+                            {% if total_leaves_this_year > 0 %}
+                                {% widthratio approved_leaves_count total_leaves_this_year 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </h4>
+                        <small class="text-muted">Ποσοστό Έγκρισης</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

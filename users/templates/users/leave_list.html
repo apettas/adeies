@@ -1,0 +1,433 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Οι Άδειές Μου - Σύστημα Αδειών ΠΔΕΔΕ{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-list-ul"></i> Οι Άδειές Μου
+        </h2>
+        <p class="text-muted">Διαχειριστείτε και παρακολουθήστε τις αιτήσεις άδειας</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'users:leave_create' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Νέα Αίτηση
+        </a>
+        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-funnel"></i> Φίλτρα
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="leave_type" class="form-label">Τύπος Άδειας</label>
+                        <select name="leave_type" id="leave_type" class="form-select">
+                            <option value="">Όλοι οι τύποι</option>
+                            <option value="annual" {% if request.GET.leave_type == 'annual' %}selected{% endif %}>
+                                Κανονική Άδεια
+                            </option>
+                            <option value="sick" {% if request.GET.leave_type == 'sick' %}selected{% endif %}>
+                                Αναρρωτική άδεια με υπεύθηνη δήλωση
+                            </option>
+                            <option value="maternity" {% if request.GET.leave_type == 'maternity' %}selected{% endif %}>
+                                Άδεια Μητρότητας
+                            </option>
+                            <option value="paternity" {% if request.GET.leave_type == 'paternity' %}selected{% endif %}>
+                                Άδεια Πατρότητας
+                            </option>
+                            <option value="special" {% if request.GET.leave_type == 'special' %}selected{% endif %}>
+                                Ειδική Άδεια
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Κατάσταση</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">Όλες οι καταστάσεις</option>
+                            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>
+                                Εκκρεμής
+                            </option>
+                            <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>
+                                Εγκεκριμένη
+                            </option>
+                            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>
+                                Απορρίφθηκε
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="year" class="form-label">Έτος</label>
+                        <select name="year" id="year" class="form-select">
+                            <option value="">Όλα τα έτη</option>
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if request.GET.year == year|stringformat:"s" %}selected{% endif %}>
+                                    {{ year }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="ordering" class="form-label">Ταξινόμηση</label>
+                        <select name="ordering" id="ordering" class="form-select">
+                            <option value="-created_at" {% if request.GET.ordering == '-created_at' %}selected{% endif %}>
+                                Νεότερες πρώτα
+                            </option>
+                            <option value="created_at" {% if request.GET.ordering == 'created_at' %}selected{% endif %}>
+                                Παλαιότερες πρώτα
+                            </option>
+                            <option value="-start_date" {% if request.GET.ordering == '-start_date' %}selected{% endif %}>
+                                Ημερομηνία έναρξης (νεότερες)
+                            </option>
+                            <option value="start_date" {% if request.GET.ordering == 'start_date' %}selected{% endif %}>
+                                Ημερομηνία έναρξης (παλαιότερες)
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search"></i> Αναζήτηση
+                        </button>
+                        <a href="{% url 'users:leave_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <h5 class="text-primary">{{ total_leaves }}</h5>
+                <small class="text-muted">Συνολικές Αιτήσεις</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h5 class="text-warning">{{ pending_count }}</h5>
+                <small class="text-muted">Εκκρεμείς</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h5 class="text-success">{{ approved_count }}</h5>
+                <small class="text-muted">Εγκεκριμένες</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h5 class="text-danger">{{ rejected_count }}</h5>
+                <small class="text-muted">Απορριφθείσες</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaves List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-calendar-check"></i> 
+                    Αιτήσεις Άδειας 
+                    {% if leaves.paginator.count %}
+                        ({{ leaves.paginator.count }} συνολικά)
+                    {% endif %}
+                </h6>
+                {% if leaves %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots"></i> Ενέργειες
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="window.print()">
+                                <i class="bi bi-printer"></i> Εκτύπωση
+                            </a></li>
+                            <li><a class="dropdown-item" href="#">
+                                <i class="bi bi-download"></i> Εξαγωγή PDF
+                            </a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-body p-0">
+                {% if leaves %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Τύπος</th>
+                                    <th>Ημερομηνίες</th>
+                                    <th>Ημέρες</th>
+                                    <th>Κατάσταση</th>
+                                    <th>Ημ. Υποβολής</th>
+                                    <th>Εγκρίθηκε από</th>
+                                    <th class="text-center">Ενέργειες</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leaves %}
+                                <tr>
+                                    <td>
+                                        {% if 'Κανονική' in leave.leave_type.eidos_adeias %}
+                                            <i class="bi bi-calendar-check text-success"></i>
+                                            <span class="d-none d-md-inline">Κανονική Άδεια</span>
+                                        {% elif 'Αναρρωτικ' in leave.leave_type.eidos_adeias %}
+                                            <i class="bi bi-heart-pulse text-info"></i>
+                                            <span class="d-none d-md-inline">Αναρρωτική</span>
+                                        {% elif 'Μητρότητ' in leave.leave_type.eidos_adeias %}
+                                            <i class="bi bi-heart text-pink"></i>
+                                            <span class="d-none d-md-inline">Μητρότητας</span>
+                                        {% elif 'Πατρότητ' in leave.leave_type.eidos_adeias %}
+                                            <i class="bi bi-person-hearts text-blue"></i>
+                                            <span class="d-none d-md-inline">Πατρότητας</span>
+                                        {% else %}
+                                            <i class="bi bi-calendar-x text-secondary"></i>
+                                            <span class="d-none d-md-inline">{{ leave.leave_type.eidos_adeias }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if leave.periods.exists %}
+                                            {% with first_period=leave.periods.first last_period=leave.periods.last %}
+                                                <div class="fw-bold">{{ first_period.start_date|date:"d/m/Y" }}</div>
+                                                <small class="text-muted">έως {{ last_period.end_date|date:"d/m/Y" }}</small>
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-muted">Χωρίς ημερομηνίες</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            {{ leave.total_days }}
+                                            {% if leave.total_days == 1 %}ημέρα{% else %}ημέρες{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-hourglass-split"></i> Εκκρεμής
+                                            </span>
+                                        {% elif leave.status.name == 'ΕΓΚΡΙΘΗΚΕ' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Εγκεκριμένη
+                                            </span>
+                                        {% elif leave.status.name == 'ΑΠΟΡΡΙΦΘΗΚΕ' %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle"></i> Απορρίφθηκε
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                {{ leave.status.name }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ leave.created_at|date:"d/m/Y H:i" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if leave.approved_by %}
+                                            <small class="text-muted">
+                                                {{ leave.approved_by.get_full_name|default:leave.approved_by.email }}
+                                                <br>
+                                                <em>{{ leave.approved_at|date:"d/m/Y" }}</em>
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'users:leave_detail' leave.pk %}" 
+                                               class="btn btn-outline-primary" 
+                                               title="Προβολή λεπτομερειών">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' %}
+                                                <a href="#"
+                                                   class="btn btn-outline-warning"
+                                                   title="Επεξεργασία"
+                                                   data-bs-toggle="tooltip">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a href="#"
+                                                   class="btn btn-outline-danger"
+                                                   title="Ακύρωση"
+                                                   data-bs-toggle="modal"
+                                                   data-bs-target="#cancelModal{{ leave.pk }}">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Cancel Modal -->
+                                {% if leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' %}
+                                <div class="modal fade" id="cancelModal{{ leave.pk }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Ακύρωση Αίτησης</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Είστε σίγουροι ότι θέλετε να ακυρώσετε την αίτηση άδειας;</p>
+                                                <div class="alert alert-warning">
+                                                    <strong>Τύπος:</strong> {{ leave.leave_type.eidos_adeias }}<br>
+                                                    {% if leave.periods.exists %}
+                                                        {% with first_period=leave.periods.first last_period=leave.periods.last %}
+                                                            <strong>Ημερομηνίες:</strong> {{ first_period.start_date|date:"d/m/Y" }} - {{ last_period.end_date|date:"d/m/Y" }}<br>
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                    <strong>Ημέρες:</strong> {{ leave.total_days }}
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    <i class="bi bi-x"></i> Όχι
+                                                </button>
+                                                <form method="post" action="{% url 'users:leave_delete' leave.pk %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">
+                                                        <i class="bi bi-trash"></i> Ναι, ακύρωση
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if leaves.has_other_pages %}
+                        <div class="card-footer">
+                            <nav aria-label="Σελιδοποίηση αιτήσεων">
+                                <ul class="pagination pagination-sm justify-content-center mb-0">
+                                    {% if leaves.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if request.GET.leave_type %}&leave_type={{ request.GET.leave_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.ordering %}&ordering={{ request.GET.ordering }}{% endif %}">
+                                                <i class="bi bi-chevron-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ leaves.previous_page_number }}{% if request.GET.leave_type %}&leave_type={{ request.GET.leave_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.ordering %}&ordering={{ request.GET.ordering }}{% endif %}">
+                                                <i class="bi bi-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in leaves.paginator.page_range %}
+                                        {% if leaves.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > leaves.number|add:'-3' and num < leaves.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if request.GET.leave_type %}&leave_type={{ request.GET.leave_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.ordering %}&ordering={{ request.GET.ordering }}{% endif %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if leaves.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ leaves.next_page_number }}{% if request.GET.leave_type %}&leave_type={{ request.GET.leave_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.ordering %}&ordering={{ request.GET.ordering }}{% endif %}">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ leaves.paginator.num_pages }}{% if request.GET.leave_type %}&leave_type={{ request.GET.leave_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.ordering %}&ordering={{ request.GET.ordering }}{% endif %}">
+                                                <i class="bi bi-chevron-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            
+                            <div class="text-center mt-2">
+                                <small class="text-muted">
+                                    Σελίδα {{ leaves.number }} από {{ leaves.paginator.num_pages }} 
+                                    ({{ leaves.paginator.count }} συνολικά αποτελέσματα)
+                                </small>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-calendar-x display-4 text-muted"></i>
+                        <h5 class="mt-3 text-muted">Δεν βρέθηκαν αιτήσεις άδειας</h5>
+                        <p class="text-muted">
+                            {% if request.GET.leave_type or request.GET.status or request.GET.year %}
+                                Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης
+                            {% else %}
+                                Δεν έχετε υποβάλει καμία αίτηση άδειας ακόμα
+                            {% endif %}
+                        </p>
+                        <div class="mt-3">
+                            {% if request.GET.leave_type or request.GET.status or request.GET.year %}
+                                <a href="{% url 'users:leave_list' %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-x-circle"></i> Καθαρισμός φίλτρων
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'users:leave_create' %}" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Νέα Αίτηση Άδειας
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
+// Auto-submit form on filter change
+document.querySelectorAll('#leave_type, #status, #year, #ordering').forEach(function(element) {
+    element.addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+{% endblock %}

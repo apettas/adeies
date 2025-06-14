@@ -1,0 +1,1102 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Νέα Αίτηση Άδειας - Σύστημα Αδειών ΠΔΕΔΕ{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/material_blue.css">
+<style>
+/* Custom Flatpickr Greek styling */
+.flatpickr-calendar {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 1px solid #e9ecef;
+}
+
+.flatpickr-calendar.open {
+    z-index: 1050;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.flatpickr-calendar .flatpickr-month {
+    background: #007bff;
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.flatpickr-calendar .flatpickr-current-month input.cur-year {
+    color: white;
+    background: transparent;
+}
+
+.flatpickr-calendar .flatpickr-weekdays {
+    background: #f8f9fa;
+}
+
+.flatpickr-calendar .flatpickr-day.today {
+    background: #28a745;
+    color: white;
+    border: none;
+}
+
+.flatpickr-calendar .flatpickr-day.selected {
+    background: #007bff;
+    color: white;
+    border: none;
+}
+
+.flatpickr-calendar .flatpickr-day:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+/* Input styling for calendar icon */
+.date-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23007bff' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px;
+    cursor: pointer;
+}
+
+.date-input:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23007bff' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z'/%3E%3C/svg%3E");
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-plus-circle"></i> Νέα Αίτηση Άδειας
+        </h2>
+        <p class="text-muted">Συμπληρώστε τα στοιχεία για την αίτηση άδειας</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'users:leave_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Πίσω στη λίστα
+        </a>
+        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-house"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Leave Balance Info -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-calendar-check"></i> Υπόλοιπο Κανονικής Άδειας
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="text-success">{{ user.employee.annual_leave_days }}</h4>
+                        <small class="text-muted">Ετήσιες</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-info">{{ user.employee.carryover_previous_years|default:0 }}</h4>
+                        <small class="text-muted">Μεταφερόμενες</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-primary">{{ user.employee.get_leave_balance }}</h4>
+                        <small class="text-muted">Διαθέσιμες</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-heart-pulse"></i> Υπόλοιπο Αναρρωτικής με Υπεύθυνη Δήλωση
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info">{{ user.employee.sick_leave_days }}</h4>
+                        <small class="text-muted">Ετήσιες</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leave Request Form -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-form-check"></i> Στοιχεία Αίτησης
+                </h5>
+            </div>
+            
+            <div class="card-body">
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Υπάρχουν σφάλματα στη φόρμα</h6>
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                <form method="post" enctype="multipart/form-data" id="leaveForm">
+                    {% csrf_token %}
+                    
+                    <!-- Leave Type -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_leave_type" class="form-label required">
+                                <i class="bi bi-tag"></i> Τύπος Άδειας
+                            </label>
+                            <select class="form-select"
+                                    id="id_leave_type"
+                                    name="leave_type"
+                                    required>
+                                <option value="">Επιλέξτε τύπο άδειας</option>
+                                {% for leave_type in leave_types %}
+                                    <option value="{{ leave_type.id }}">
+                                        {{ leave_type.eidos_adeias }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Επιλέξτε τον κατάλληλο τύπο άδειας
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6" id="availableDaysContainer" style="display: none;">
+                            <label class="form-label">Διαθέσιμες Ημέρες</label>
+                            <div class="form-control-plaintext" id="availableDays">
+                                <span class="badge bg-light text-dark">
+                                    Επιλέξτε τύπο άδειας πρώτα
+                                </span>
+                            </div>
+                            <div class="form-text">
+                                Ημέρες που μπορείτε να χρησιμοποιήσετε
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Date Ranges -->
+                    <div class="mb-3">
+                        <label class="form-label required">
+                            <i class="bi bi-calendar-range"></i> Περίοδοι Άδειας
+                        </label>
+                        <div id="dateRangesContainer">
+                            <div class="date-range-item border rounded p-3 mb-2">
+                                <div class="row">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Από</label>
+                                        <input type="text"
+                                               class="form-control date-input"
+                                               name="start_dates[]"
+                                               placeholder="dd/mm/yyyy"
+                                               pattern="\d{2}/\d{2}/\d{4}"
+                                               required>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Έως</label>
+                                        <input type="text"
+                                               class="form-control date-input"
+                                               name="end_dates[]"
+                                               placeholder="dd/mm/yyyy"
+                                               pattern="\d{2}/\d{2}/\d{4}"
+                                               required>
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-range" style="display: none;">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted range-days">Επιλέξτε ημερομηνίες</small>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addDateRange">
+                            <i class="bi bi-plus"></i> Προσθήκη Περιόδου
+                        </button>
+                    </div>
+                    
+                    <!-- Days Calculation -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-calculator"></i> Συνολικές Ημέρες
+                            </label>
+                            <div class="form-control-plaintext" id="totalDays">
+                                <span class="badge bg-primary" style="font-size: 1rem;">
+                                    <span id="daysCount">0</span> ημέρες
+                                </span>
+                            </div>
+                            <div class="form-text" id="daysBreakdown">
+                                Επιλέξτε ημερομηνίες για υπολογισμό
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox"
+                                       id="id_include_weekends"
+                                       name="include_weekends">
+                                <label class="form-check-label" for="id_include_weekends">
+                                    <i class="bi bi-calendar-week"></i> Συμπεριλαμβάνονται Σαββατοκύριακα
+                                </label>
+                                <div class="form-text">
+                                    Μόνο για ειδικούς τύπους αδειών
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- File Attachments -->
+                    <div class="mb-3">
+                        <label for="id_attachments" class="form-label">
+                            <i class="bi bi-paperclip"></i> Συνημμένα Αρχεία
+                        </label>
+                        <input type="file"
+                               class="form-control"
+                               id="id_attachments"
+                               name="attachments"
+                               multiple
+                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                        <div class="form-text">
+                            Επιλέξτε αρχεία για επισύναψη (PDF, Word, εικόνες)
+                        </div>
+                    </div>
+                    
+                    <!-- Reason -->
+                    <div class="mb-3">
+                        <label for="{{ form.reason.id_for_label }}" class="form-label">
+                            <i class="bi bi-chat-text"></i> Τυχόν Σημειώσεις
+                        </label>
+                        <textarea class="form-control {% if form.reason.errors %}is-invalid{% endif %}"
+                                  id="{{ form.reason.id_for_label }}"
+                                  name="{{ form.reason.name }}"
+                                  rows="3"
+                                  placeholder="Τυχόν σημειώσεις (προαιρετικό)">{{ form.reason.value|default:'' }}</textarea>
+                        {% if form.reason.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.reason.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+                                <i class="bi bi-arrow-left"></i> Ακύρωση
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" id="previewBtn">
+                                <i class="bi bi-eye"></i> Προεπισκόπηση
+                            </button>
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="bi bi-check-circle"></i> Υποβολή Αίτησης
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help Panel -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Οδηγίες
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6 class="text-primary">Τύποι Αδειών:</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-calendar-check text-success"></i>
+                        <strong>Κανονική Άδεια:</strong> Ετήσια άδεια για ξεκούραση
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-heart-pulse text-info"></i>
+                        <strong>Αναρρωτική άδεια με υπεύθηνη δήλωση:</strong> Για λόγους υγείας
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-heart text-pink"></i>
+                        <strong>Άδεια Μητρότητας:</strong> Για μητέρες
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-person-hearts text-blue"></i>
+                        <strong>Άδεια Πατρότητας:</strong> Για πατέρες
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-star text-warning"></i>
+                        <strong>Ειδική Άδεια:</strong> Για ειδικούς λόγους
+                    </li>
+                </ul>
+                
+                <hr>
+                
+                <h6 class="text-primary">Σημαντικές Πληροφορίες:</h6>
+                <ul class="small">
+                    <li>Οι αιτήσεις υποβάλλονται για έγκριση</li>
+                    <li>Τα Σαββατοκύριακα δεν μετρούν συνήθως</li>
+                    <li>Απαιτείται προηγούμενη ενημέρωση</li>
+                    <li>Ελέγξτε το υπόλοιπό σας πριν την υποβολή</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>Συμβουλή:</strong> Για άδειες άνω των 10 ημερών, επικοινωνήστε πρώτα με τον προϊστάμενό σας.
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendar widget placeholder -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-calendar3"></i> Ημερολόγιο
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="miniCalendar" class="text-center">
+                    <small class="text-muted">
+                        Ημερολόγιο θα εμφανιστεί εδώ<br>
+                        για επιλογή ημερομηνιών
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-eye"></i> Προεπισκόπηση Αίτησης Άδειας
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Κλείσιμο
+                </button>
+                <button type="button" class="btn btn-success" onclick="$('#leaveForm').submit()">
+                    <i class="bi bi-check-circle"></i> Υποβολή Αίτησης
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Simple and reliable date picker implementation
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing custom date picker...');
+    
+    // Simple date picker functionality
+    function initializeDateInput(input) {
+        console.log('Setting up date input:', input.name || input.className);
+        
+        // Add calendar click handler
+        input.addEventListener('click', function() {
+            // For mobile devices, use native date picker
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                this.type = 'date';
+                this.click();
+                return;
+            }
+            
+            // Show a simple calendar popup
+            showCalendarPopup(this);
+        });
+        
+        // Format validation
+        input.addEventListener('input', function() {
+            let value = this.value;
+            
+            // Auto-format as user types
+            value = value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length >= 3) {
+                value = value.substring(0,2) + '/' + value.substring(2);
+            }
+            if (value.length >= 6) {
+                value = value.substring(0,5) + '/' + value.substring(5,9);
+            }
+            
+            this.value = value;
+            
+            // Validate complete date
+            if (value.length === 10) {
+                validateGreekDate(this);
+            }
+        });
+        
+        // Add visual calendar icon
+        input.style.backgroundImage = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' fill=\'%23007bff\' viewBox=\'0 0 16 16\'%3E%3Cpath d=\'M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z\'/%3E%3C/svg%3E")';
+        input.style.backgroundRepeat = 'no-repeat';
+        input.style.backgroundPosition = 'right 10px center';
+        input.style.backgroundSize = '16px';
+        input.style.paddingRight = '35px';
+        input.style.cursor = 'pointer';
+    }
+    
+    function showCalendarPopup(input) {
+        // Create a simple calendar modal
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+            align-items: center; justify-content: center;
+        `;
+        
+        const calendar = document.createElement('div');
+        calendar.style.cssText = `
+            background: white; border-radius: 8px; padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 300px;
+        `;
+        
+        // Get current date or parse existing value
+        const now = new Date();
+        let currentDate = new Date();
+        if (input.value) {
+            const parsed = parseGreekDate(input.value);
+            if (parsed) currentDate = parsed;
+        }
+        
+        // Create calendar header
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;';
+        
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '‹';
+        prevBtn.style.cssText = 'border: none; background: #007bff; color: white; border-radius: 4px; width: 30px; height: 30px;';
+        
+        const monthYear = document.createElement('span');
+        monthYear.style.cssText = 'font-weight: bold; color: #333;';
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = '›';
+        nextBtn.style.cssText = 'border: none; background: #007bff; color: white; border-radius: 4px; width: 30px; height: 30px;';
+        
+        header.appendChild(prevBtn);
+        header.appendChild(monthYear);
+        header.appendChild(nextBtn);
+        
+        // Create calendar grid
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center;';
+        
+        // Greek day names
+        const dayNames = ['Δε', 'Τρ', 'Τε', 'Πε', 'Πα', 'Σα', 'Κυ'];
+        dayNames.forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.textContent = day;
+            dayHeader.style.cssText = 'font-weight: bold; padding: 5px; background: #f8f9fa; font-size: 12px;';
+            grid.appendChild(dayHeader);
+        });
+        
+        function renderMonth() {
+            // Clear existing days
+            const dayElements = grid.querySelectorAll('.calendar-day');
+            dayElements.forEach(el => el.remove());
+            
+            // Greek month names
+            const monthNames = [
+                'Ιανουάριος', 'Φεβρουάριος', 'Μάρτιος', 'Απρίλιος', 'Μάιος', 'Ιούνιος',
+                'Ιούλιος', 'Αύγουστος', 'Σεπτέμβριος', 'Οκτώβριος', 'Νοέμβριος', 'Δεκέμβριος'
+            ];
+            
+            monthYear.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            
+            // Adjust for Monday start (getDay() returns 0=Sunday, we want 1=Monday)
+            let startDay = (firstDay.getDay() + 6) % 7;
+            
+            // Add empty cells for previous month
+            for (let i = 0; i < startDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day';
+                grid.appendChild(emptyDay);
+            }
+            
+            // Add days of current month
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = day;
+                dayElement.style.cssText = `
+                    padding: 8px; cursor: pointer; border-radius: 4px;
+                    transition: background-color 0.2s;
+                `;
+                
+                const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // Disable past dates
+                if (dayDate < today) {
+                    dayElement.style.cssText += 'color: #ccc; cursor: not-allowed;';
+                } else {
+                    dayElement.addEventListener('mouseenter', () => {
+                        dayElement.style.backgroundColor = '#e9ecef';
+                    });
+                    dayElement.addEventListener('mouseleave', () => {
+                        dayElement.style.backgroundColor = '';
+                    });
+                    dayElement.addEventListener('click', () => {
+                        const selectedDate = formatGreekDate(dayDate);
+                        input.value = selectedDate;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('blur', { bubbles: true }));
+                        document.body.removeChild(modal);
+                    });
+                }
+                
+                // Highlight today
+                if (dayDate.toDateString() === today.toDateString()) {
+                    dayElement.style.cssText += 'background: #28a745; color: white;';
+                }
+                
+                grid.appendChild(dayElement);
+            }
+        }
+        
+        prevBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderMonth();
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderMonth();
+        });
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Κλείσιμο';
+        closeBtn.style.cssText = 'width: 100%; margin-top: 15px; padding: 8px; background: #6c757d; color: white; border: none; border-radius: 4px;';
+        closeBtn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        calendar.appendChild(header);
+        calendar.appendChild(grid);
+        calendar.appendChild(closeBtn);
+        modal.appendChild(calendar);
+        
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+        document.body.appendChild(modal);
+        renderMonth();
+    }
+    
+    // Initialize all date inputs
+    const dateInputs = document.querySelectorAll('.date-input');
+    console.log('Found', dateInputs.length, 'date inputs');
+    
+    dateInputs.forEach(input => {
+        initializeDateInput(input);
+    });
+    
+    // Store globally for new inputs
+    window.initializeDatePicker = initializeDateInput;
+    
+    const leaveTypeSelect = document.getElementById('id_leave_type');
+    const includeWeekendsCheckbox = document.getElementById('id_include_weekends');
+    const availableDaysSpan = document.getElementById('availableDays');
+    const daysCountSpan = document.getElementById('daysCount');
+    const daysBreakdownDiv = document.getElementById('daysBreakdown');
+    const previewBtn = document.getElementById('previewBtn');
+    const dateRangesContainer = document.getElementById('dateRangesContainer');
+    const addDateRangeBtn = document.getElementById('addDateRange');
+    
+    // Leave balance mapping based on actual leave type IDs
+    const leaveBalances = {
+        '1': 25, // Κανονική Άδεια
+        '2': 30, // Αναρρωτική Άδεια
+        '3': 1,  // Άδεια Αιμοδοσίας
+        '4': 0,  // Προφορική Άδεια
+        '5': 0,  // Εορταστική Άδεια
+        '6': 30  // Άδεια Επιμόρφωσης
+    };
+    
+    // Greek date utilities
+    function parseGreekDate(dateStr) {
+        if (!dateStr || !dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) return null;
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day);
+    }
+    
+    function formatGreekDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+    
+    function validateGreekDate(input) {
+        const value = input.value;
+        if (!value) return true;
+        
+        const date = parseGreekDate(value);
+        if (!date || isNaN(date.getTime())) {
+            input.setCustomValidity('Εισάγετε έγκυρη ημερομηνία (dd/mm/yyyy)');
+            return false;
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (date < today) {
+            input.setCustomValidity('Η ημερομηνία δεν μπορεί να είναι στο παρελθόν');
+            return false;
+        }
+        
+        input.setCustomValidity('');
+        return true;
+    }
+    
+    // Add date range functionality
+    addDateRangeBtn.addEventListener('click', function() {
+        const rangeItem = document.createElement('div');
+        rangeItem.className = 'date-range-item border rounded p-3 mb-2';
+        rangeItem.innerHTML = `
+            <div class="row">
+                <div class="col-md-5">
+                    <label class="form-label">Από</label>
+                    <input type="text"
+                           class="form-control date-input"
+                           name="start_dates[]"
+                           placeholder="dd/mm/yyyy"
+                           pattern="\\d{2}/\\d{2}/\\d{4}"
+                           required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Έως</label>
+                    <input type="text"
+                           class="form-control date-input"
+                           name="end_dates[]"
+                           placeholder="dd/mm/yyyy"
+                           pattern="\\d{2}/\\d{2}/\\d{4}"
+                           required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-range">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted range-days">Επιλέξτε ημερομηνίες</small>
+            </div>
+        `;
+        
+        dateRangesContainer.appendChild(rangeItem);
+        updateRemoveButtons();
+        attachDateRangeListeners(rangeItem);
+        
+        // Initialize flatpickr on new date inputs
+        rangeItem.querySelectorAll('.date-input').forEach(input => {
+            if (window.initializeDatePicker) {
+                window.initializeDatePicker(input);
+            } else {
+                console.warn('Flatpickr initialization function not available');
+            }
+        });
+    });
+    
+    function updateRemoveButtons() {
+        const ranges = dateRangesContainer.querySelectorAll('.date-range-item');
+        ranges.forEach((range, index) => {
+            const removeBtn = range.querySelector('.remove-range');
+            if (ranges.length > 1) {
+                removeBtn.style.display = 'block';
+            } else {
+                removeBtn.style.display = 'none';
+            }
+        });
+    }
+    
+    function attachDateRangeListeners(rangeItem) {
+        const startInput = rangeItem.querySelector('input[name="start_dates[]"]');
+        const endInput = rangeItem.querySelector('input[name="end_dates[]"]');
+        const removeBtn = rangeItem.querySelector('.remove-range');
+        const rangeDays = rangeItem.querySelector('.range-days');
+        
+        [startInput, endInput].forEach(input => {
+            input.addEventListener('input', function() {
+                validateGreekDate(this);
+                calculateRangeDays(rangeItem);
+                calculateTotalDays();
+            });
+            
+            input.addEventListener('blur', function() {
+                validateGreekDate(this);
+            });
+        });
+        
+        removeBtn.addEventListener('click', function() {
+            rangeItem.remove();
+            updateRemoveButtons();
+            calculateTotalDays();
+        });
+        
+        function calculateRangeDays(item) {
+            const start = item.querySelector('input[name="start_dates[]"]').value;
+            const end = item.querySelector('input[name="end_dates[]"]').value;
+            const daysSpan = item.querySelector('.range-days');
+            
+            const startDate = parseGreekDate(start);
+            const endDate = parseGreekDate(end);
+            
+            if (startDate && endDate && startDate <= endDate) {
+                let workingDays = 0;
+                let weekendDays = 0;
+                const includeWeekends = includeWeekendsCheckbox.checked;
+                
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dayOfWeek = d.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        weekendDays++;
+                        if (includeWeekends) {
+                            workingDays++;
+                        }
+                    } else {
+                        workingDays++;
+                    }
+                }
+                
+                let message = `${workingDays} εργάσιμες ημέρες`;
+                if (weekendDays > 0) {
+                    if (includeWeekends) {
+                        message += `, (Συμπεριλαμβάνονται ${weekendDays} ημέρες σαββατοκύριακου)`;
+                    } else {
+                        message += `, (Εξαιρούνται ${weekendDays} ημέρες σαββατοκύριακου)`;
+                    }
+                }
+                
+                daysSpan.textContent = message;
+                daysSpan.className = 'text-success range-days';
+            } else if (start && end) {
+                daysSpan.textContent = 'Μη έγκυρες ημερομηνίες';
+                daysSpan.className = 'text-danger range-days';
+            } else {
+                daysSpan.textContent = 'Επιλέξτε ημερομηνίες';
+                daysSpan.className = 'text-muted range-days';
+            }
+        }
+    }
+    
+    function calculateWorkingDays(startDate, endDate) {
+        let days = 0;
+        let weekends = 0;
+        const includeWeekends = includeWeekendsCheckbox.checked;
+        
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            // Monday = 1, Sunday = 0, so weekend is 0 (Sunday) or 6 (Saturday)
+            const dayOfWeek = d.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                weekends++;
+                if (includeWeekends) {
+                    days++;
+                }
+            } else {
+                days++;
+            }
+        }
+        
+        return days;
+    }
+    
+    function calculateTotalDays() {
+        const ranges = dateRangesContainer.querySelectorAll('.date-range-item');
+        let totalDays = 0;
+        let totalWeekends = 0;
+        let validRanges = 0;
+        
+        ranges.forEach(range => {
+            const startInput = range.querySelector('input[name="start_dates[]"]');
+            const endInput = range.querySelector('input[name="end_dates[]"]');
+            
+            const startDate = parseGreekDate(startInput.value);
+            const endDate = parseGreekDate(endInput.value);
+            
+            if (startDate && endDate && startDate <= endDate) {
+                validRanges++;
+                let rangeDays = 0;
+                let rangeWeekends = 0;
+                const includeWeekends = includeWeekendsCheckbox.checked;
+                
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dayOfWeek = d.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        rangeWeekends++;
+                        if (includeWeekends) {
+                            rangeDays++;
+                        }
+                    } else {
+                        rangeDays++;
+                    }
+                }
+                
+                totalDays += rangeDays;
+                totalWeekends += rangeWeekends;
+            }
+        });
+        
+        if (validRanges > 0) {
+            daysCountSpan.textContent = totalDays;
+            
+            let breakdown = `${totalDays} εργάσιμες ημέρες`;
+            if (totalWeekends > 0) {
+                const includeWeekends = includeWeekendsCheckbox.checked;
+                if (includeWeekends) {
+                    breakdown += `, (Συμπεριλαμβάνονται ${totalWeekends} ημέρες που είναι μέσα σε σαββατοκύριακα)`;
+                } else {
+                    breakdown += `, (Εξαιρούνται ${totalWeekends} ημέρες που είναι μέσα σε σαββατοκύριακα)`;
+                }
+            }
+            daysBreakdownDiv.textContent = breakdown;
+            
+            // Show emergency contact for long leaves
+            if (totalDays > 5) {
+                emergencySection.style.display = 'block';
+            } else {
+                emergencySection.style.display = 'none';
+            }
+            
+            // Validate against available balance
+            const selectedType = leaveTypeSelect.value;
+            if (selectedType && leaveBalances[selectedType] !== undefined) {
+                const available = leaveBalances[selectedType];
+                if (totalDays > available) {
+                    daysBreakdownDiv.innerHTML += '<br><span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Υπερβαίνει το διαθέσιμο υπόλοιπο!</span>';
+                }
+            }
+        } else {
+            daysCountSpan.textContent = '0';
+            daysBreakdownDiv.textContent = 'Επιλέξτε έγκυρες ημερομηνίες';
+            emergencySection.style.display = 'none';
+        }
+    }
+    
+    // Update available days when leave type changes
+    leaveTypeSelect.addEventListener('change', function() {
+        const selectedType = this.value;
+        const availableDaysContainer = document.getElementById('availableDaysContainer');
+        
+        // Εμφάνιση του πεδίου διαθέσιμων ημερών μόνο για κανονική άδεια (ID: 1)
+        if (selectedType === '1') {
+            // Κανονική άδεια - εμφάνιση του πεδίου
+            availableDaysContainer.style.display = 'block';
+            
+            if (leaveBalances[selectedType] !== undefined) {
+                const days = leaveBalances[selectedType];
+                availableDaysSpan.innerHTML = `
+                    <span class="badge bg-${days > 0 ? 'success' : 'warning'} text-white">
+                        ${days} ημέρες διαθέσιμες
+                    </span>
+                `;
+            } else {
+                availableDaysSpan.innerHTML = '<span class="badge bg-light text-dark">Επιλέξτε τύπο άδειας</span>';
+            }
+        } else {
+            // Άλλοι τύποι αδειών - κρύψιμο του πεδίου
+            availableDaysContainer.style.display = 'none';
+        }
+        
+        calculateTotalDays();
+    });
+    
+    // Weekend inclusion change
+    includeWeekendsCheckbox.addEventListener('change', function() {
+        // Recalculate all range days
+        dateRangesContainer.querySelectorAll('.date-range-item').forEach(range => {
+            const startInput = range.querySelector('input[name="start_dates[]"]');
+            const endInput = range.querySelector('input[name="end_dates[]"]');
+            const start = parseGreekDate(startInput.value);
+            const end = parseGreekDate(endInput.value);
+            
+            if (start && end && start <= end) {
+                const days = calculateWorkingDays(start, end);
+                const rangeDays = range.querySelector('.range-days');
+                rangeDays.textContent = `${days} εργάσιμες ημέρες`;
+            }
+        });
+        
+        calculateTotalDays();
+    });
+    
+    // Initialize first range
+    const firstRange = dateRangesContainer.querySelector('.date-range-item');
+    attachDateRangeListeners(firstRange);
+    updateRemoveButtons();
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.required::after {
+    content: " *";
+    color: red;
+}
+
+#miniCalendar {
+    min-height: 200px;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-pink { color: #e91e63 !important; }
+.text-blue { color: #2196f3 !important; }
+
+/* Date range styles */
+.date-range-item {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.date-range-item:hover {
+    background-color: #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.date-input {
+    font-family: 'Courier New', monospace;
+}
+
+.date-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.range-days {
+    font-weight: 500;
+    display: block;
+    margin-top: 4px;
+}
+
+.remove-range {
+    min-width: 38px;
+    height: 38px;
+}
+
+#addDateRange {
+    border: 2px dashed #007bff;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+#addDateRange:hover {
+    background-color: #007bff;
+    color: white;
+    border-style: solid;
+}
+
+.date-input::placeholder {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.date-input:invalid {
+    border-color: #dc3545;
+}
+
+.date-input:valid {
+    border-color: #28a745;
+}
+
+/* Flatpickr customization */
+.flatpickr-input {
+    background: white !important;
+    cursor: pointer;
+}
+
+.flatpickr-input[readonly] {
+    background: white !important;
+    cursor: pointer;
+}
+
+.flatpickr-calendar {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #dee2e6 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+.flatpickr-day.selected {
+    background: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.flatpickr-day.today {
+    border-color: #007bff !important;
+}
+
+.flatpickr-day:hover {
+    background: #e9ecef !important;
+    border-color: #dee2e6 !important;
+}
+
+.flatpickr-months .flatpickr-month {
+    background: #007bff !important;
+    color: white !important;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    background: #007bff !important;
+}
+</style>
+{% endblock %}

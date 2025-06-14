@@ -77,7 +77,12 @@ class Role(models.Model):
 class CustomUser(AbstractUser):
     """Επέκταση του Django User model"""
     email = models.EmailField(unique=True, verbose_name="Email")
-    is_employee = models.BooleanField(default=False, verbose_name="Είναι υπάλληλος")
+    is_staff = models.BooleanField(
+        default=False,
+        verbose_name="Πρόσβαση στο Admin Interface",
+        help_text="Καθορίζει αν ο χρήστης μπορεί να συνδεθεί στο admin interface."
+    )
+    is_employee = models.BooleanField(default=False, verbose_name="Θα γίνει Πιστοποίηση του χρήστη;")
     
     objects = CustomUserManager()
     
@@ -142,9 +147,11 @@ class Employee(models.Model):
     
     # Άδειες
     regular_leave_days = models.PositiveIntegerField(default=24, verbose_name="Ημέρες κανονικής άδειας")
-    carryover_leave_days = models.PositiveIntegerField(default=0, verbose_name="Μεταφερόμενες ημέρες άδειας")
+    carryover_leave_days = models.PositiveIntegerField(default=0, verbose_name="Μεταφερόμενες ημέρες ΚΑΝΟΝΙΚΗΣ άδειας")
+    carryover_previous_years = models.PositiveIntegerField(default=0, verbose_name="Μεταφερόμενες ημέρες κανονικής προηγούμενων ετών")
+    carryover_sick_leave = models.PositiveIntegerField(default=0, verbose_name="Μεταφερόμενες αναρρωτικές άδειες")
     self_declaration_sick_days_remaining = models.PositiveIntegerField(
-        default=2, 
+        default=2,
         verbose_name="Υπόλοιπο ημερών αναρρωτικής με υπ. δήλωση"
     )
     
@@ -210,8 +217,20 @@ class Employee(models.Model):
             total=models.Sum('working_days')
         )['total'] or 0
         
-        total_available = self.regular_leave_days + self.carryover_leave_days
+        # Συνολικές διαθέσιμες ημέρες κανονικής άδειας
+        total_available = (
+            self.regular_leave_days +         # Φετινές κανονικές άδειες (24)
+            self.carryover_leave_days +       # Μεταφερόμενες από προηγούμενο έτος (24)
+            self.carryover_previous_years     # Μεταφερόμενες από παλαιότερα έτη (1)
+        )
         return max(0, total_available - used_days)
+    
+    def get_sick_leave_balance(self):
+        """Υπολογίζει το υπόλοιπο αναρρωτικών αδειών"""
+        return (
+            self.self_declaration_sick_days_remaining +
+            self.carryover_sick_leave
+        )
 
     def has_pending_leave_requests(self):
         """Ελέγχει αν έχει εκκρεμείς αιτήσεις"""
@@ -238,7 +257,7 @@ class UserRole(models.Model):
 
     class Meta:
         verbose_name = "Ρόλος Χρήστη"
-        verbose_name_plural = "Ρόλοι Χρηστών"
+        verbose_name_plural = "Ανάθεση Ρόλου σε Χρήστη"
         unique_together = ('employee', 'role')
 
     def __str__(self):

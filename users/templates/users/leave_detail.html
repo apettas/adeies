@@ -1,0 +1,522 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Λεπτομέρειες Άδειας - Σύστημα Αδειών ΠΔΕΔΕ{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-file-text"></i> Λεπτομέρειες Άδειας
+            <span class="text-muted">#{{ leave.id }}</span>
+        </h2>
+        <p class="text-muted">
+            Υποβλήθηκε στις {{ leave.created_at|date:"d/m/Y H:i" }} από {{ leave.employee.user.get_full_name|default:leave.employee.user.email }}
+        </p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'users:leave_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Πίσω στη λίστα
+        </a>
+        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-house"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Status Alert -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% if leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' or leave.status.name == 'ΕΚΚΡΕΜΕΙ' %}
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">
+                    <i class="bi bi-hourglass-split"></i> Εκκρεμής Έγκριση
+                </h5>
+                <p class="mb-0">Η αίτηση άδειας βρίσκεται σε αναμονή έγκρισης.</p>
+            </div>
+        {% elif leave.status.name == 'ΕΓΚΡΙΘΗΚΕ' %}
+            <div class="alert alert-success">
+                <h5 class="alert-heading">
+                    <i class="bi bi-check-circle"></i> Εγκεκριμένη Άδεια
+                </h5>
+                {% if leave.manager_approved_by %}
+                    <p class="mb-1">Η αίτηση άδειας εγκρίθηκε από {{ leave.manager_approved_by.user.get_full_name|default:leave.manager_approved_by.user.email }}</p>
+                    <small class="text-success">Εγκρίθηκε στις: {{ leave.manager_approved_at|date:"d/m/Y H:i" }}</small>
+                {% else %}
+                    <p class="mb-0">Η αίτηση άδειας έχει εγκριθεί.</p>
+                {% endif %}
+            </div>
+        {% elif leave.status.name == 'ΑΠΟΡΡΙΦΘΗΚΕ' %}
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">
+                    <i class="bi bi-x-circle"></i> Απορρίφθηκε
+                </h5>
+                {% if leave.manager_approved_by %}
+                    <p class="mb-1">Η αίτηση άδειας απορρίφθηκε από {{ leave.manager_approved_by.user.get_full_name|default:leave.manager_approved_by.user.email }}</p>
+                {% else %}
+                    <p class="mb-0">Η αίτηση άδειας έχει απορριφθεί.</p>
+                {% endif %}
+                {% if leave.manager_rejection_reason %}
+                    <small class="text-danger">Λόγος: {{ leave.manager_rejection_reason }}</small>
+                {% endif %}
+                {% if leave.rejection_reason %}
+                    <p class="mb-1"><strong>Λόγος απόρριψης:</strong> {{ leave.rejection_reason }}</p>
+                {% endif %}
+                <small class="text-danger">Απορρίφθηκε στις: {{ leave.approved_at|date:"d/m/Y H:i" }}</small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row">
+    <!-- Leave Details -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Στοιχεία Άδειας
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Τύπος Άδειας</h6>
+                        <p class="mb-0">
+                            {% if leave.leave_type.id_adeias == 'KANONIKI' %}
+                                <i class="bi bi-calendar-check text-success"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% elif leave.leave_type.id_adeias == 'ANARROTIKI' %}
+                                <i class="bi bi-heart-pulse text-info"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% elif leave.leave_type.id_adeias == 'AIMODOSIA' %}
+                                <i class="bi bi-droplet text-danger"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% elif leave.leave_type.id_adeias == 'PROFORIKI' %}
+                                <i class="bi bi-chat text-warning"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% elif leave.leave_type.id_adeias == 'EORTASTIKI' %}
+                                <i class="bi bi-star text-warning"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% elif leave.leave_type.id_adeias == 'EPIMORFOSI' %}
+                                <i class="bi bi-book text-info"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% else %}
+                                <i class="bi bi-calendar-x text-secondary"></i> {{ leave.leave_type.eidos_adeias }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Κατάσταση</h6>
+                        <p class="mb-0">
+                            {% if leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' or leave.status.name == 'ΕΚΚΡΕΜΕΙ' %}
+                                <span class="badge bg-warning fs-6">
+                                    <i class="bi bi-hourglass-split"></i> Εκκρεμής
+                                </span>
+                            {% elif leave.status.name == 'ΟΛΟΚΛΗΡΩΜΕΝΗ' %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-check-circle"></i> Ολοκληρωμένη
+                                </span>
+                            {% elif leave.status.is_final_status and 'ΑΠΟΡΡΙΨΗ' in leave.status.name %}
+                                <span class="badge bg-danger fs-6">
+                                    <i class="bi bi-x-circle"></i> Απορρίφθηκε
+                                </span>
+                            {% else %}
+                                <span class="badge bg-info fs-6">
+                                    <i class="bi bi-gear"></i> {{ leave.status.name }}
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-primary">Περίοδοι Άδειας</h6>
+                        {% for period in leave.periods.all %}
+                            <div class="mb-2 p-2 bg-light rounded">
+                                <i class="bi bi-calendar-event"></i>
+                                <strong>{{ period.start_date|date:"d/m/Y" }}</strong> έως
+                                <strong>{{ period.end_date|date:"d/m/Y" }}</strong>
+                                <span class="badge bg-primary ms-2">{{ period.working_days }} εργάσιμες ημέρες</span>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">Δεν υπάρχουν καταχωρημένες περίοδοι</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Συνολικές Ημέρες</h6>
+                        <p class="mb-0">
+                            <span class="badge bg-primary fs-6">
+                                {{ leave.total_days }}
+                                {% if leave.total_days == 1 %}ημέρα{% else %}ημέρες{% endif %}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Εργάσιμες Ημέρες</h6>
+                        <p class="mb-0">
+                            <span class="badge bg-success fs-6">
+                                {{ leave.working_days }}
+                                {% if leave.working_days == 1 %}ημέρα{% else %}ημέρες{% endif %}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                {% if leave.description %}
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-primary">Περιγραφή Άδειας</h6>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-0">{{ leave.description|linebreaks }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if leave.is_self_declaration %}
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Άδεια με υπεύθυνη δήλωση
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if leave.comments_to_leave_department %}
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-primary">Σχόλια προς Τμήμα Αδειών</h6>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-0">{{ leave.comments_to_leave_department|linebreaks }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Attachments Section DEBUG -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-primary">Συνημμένα Αρχεία (DEBUG: {{ attachments|length }} αρχεία)</h6>
+                        {% if attachments %}
+                            <div class="bg-light p-3 rounded">
+                                {% for attachment in attachments %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-paperclip me-2 text-muted"></i>
+                                        <a href="{{ attachment.url }}" target="_blank" class="text-decoration-none">
+                                            {{ attachment.name }}
+                                        </a>
+                                        <small class="text-muted ms-2">
+                                            ({{ attachment.size|filesizeformat }})
+                                        </small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="bg-light p-3 rounded">
+                                <p class="text-muted mb-0">Δεν υπάρχουν συνημμένα αρχεία για αυτή την αίτηση.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions for Current User's Leave -->
+        {% if leave.employee.user == user %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-gear"></i> Ενέργειες
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' or leave.status.name == 'ΕΚΚΡΕΜΕΙ' %}
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="#" class="btn btn-warning">
+                                <i class="bi bi-pencil"></i> Επεξεργασία
+                            </a>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                                <i class="bi bi-x-circle"></i> Ακύρωση
+                            </button>
+                            <button type="button" class="btn btn-info" onclick="window.print()">
+                                <i class="bi bi-printer"></i> Εκτύπωση
+                            </button>
+                        </div>
+                    {% else %}
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-info" onclick="window.print()">
+                                <i class="bi bi-printer"></i> Εκτύπωση
+                            </button>
+                            <a href="#" class="btn btn-outline-primary">
+                                <i class="bi bi-download"></i> Λήψη PDF
+                            </a>
+                            {% if leave.status.name == 'ΟΛΟΚΛΗΡΩΜΕΝΗ' %}
+                                <a href="{% url 'users:leave_create' %}" class="btn btn-success">
+                                    <i class="bi bi-plus-circle"></i> Νέα Άδεια
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Manager Actions -->
+        {% if leave.employee.user != user and leave.status.name == 'ΚΑΤΑΧΩΡΗΘΗΚΕ' %}
+            <div class="card mt-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i> Ενέργειες Διαχειριστή
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="#" class="mb-3">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="manager_comments" class="form-label">Σχόλια Διαχειριστή</label>
+                            <textarea class="form-control" id="manager_comments" name="manager_comments" rows="3" 
+                                      placeholder="Προσθέστε σχόλια για την απόφασή σας (προαιρετικό)"></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="action" value="approve" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Έγκριση
+                            </button>
+                            <button type="submit" name="action" value="reject" class="btn btn-danger">
+                                <i class="bi bi-x-circle"></i> Απόρριψη
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Employee Info -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-person"></i> Στοιχεία Υπαλλήλου
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                         style="width: 60px; height: 60px; font-size: 24px;">
+                        <i class="bi bi-person"></i>
+                    </div>
+                </div>
+                <h6 class="text-center">{{ leave.employee.user.get_full_name|default:leave.employee.user.email }}</h6>
+                <div class="text-center text-muted mb-3">
+                    <small>{{ leave.employee.department|default:"Τμήμα" }}</small>
+                    {% if leave.employee.position %}
+                        <br><small>{{ leave.employee.position }}</small>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-success">{{ leave.employee.get_leave_balance }}</h6>
+                        <small class="text-muted">Άδειες Διαθέσιμες</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Ιστορικό
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Υποβολή Αίτησης</h6>
+                            <p class="mb-1 text-muted small">
+                                {{ leave.created_at|date:"d/m/Y H:i" }}
+                            </p>
+                            <p class="mb-0 small">
+                                Υποβλήθηκε από {{ leave.employee.user.get_full_name|default:leave.employee.user.email }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if leave.status.name != 'ΚΑΤΑΧΩΡΗΘΗΚΕ' and leave.status.name != 'ΕΚΚΡΕΜΕΙ' %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if leave.status.name == 'ΟΛΟΚΛΗΡΩΜΕΝΗ' %}bg-success{% elif leave.status.is_final_status %}bg-danger{% else %}bg-info{% endif %}"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">{{ leave.status.name }}</h6>
+                            <p class="mb-1 text-muted small">
+                                {% if leave.manager_approved_at %}
+                                    {{ leave.manager_approved_at|date:"d/m/Y H:i" }}
+                                {% elif leave.processed_at %}
+                                    {{ leave.processed_at|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    {{ leave.updated_at|date:"d/m/Y H:i" }}
+                                {% endif %}
+                            </p>
+                            <p class="mb-0 small">
+                                {% if leave.manager_approved_by %}
+                                    Από {{ leave.manager_approved_by.user.get_full_name|default:leave.manager_approved_by.user.email }}
+                                {% elif leave.processed_by %}
+                                    Από {{ leave.processed_by.user.get_full_name|default:leave.processed_by.user.email }}
+                                {% else %}
+                                    Από {{ leave.created_by.user.get_full_name|default:leave.created_by.user.email }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Info -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Πληροφορίες
+                </h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>ID Αίτησης:</strong> {{ leave.id }}<br>
+                    <strong>Ημ. Υποβολής:</strong> {{ leave.created_at|date:"d/m/Y H:i" }}<br>
+                    <strong>Τελευταία Ενημέρωση:</strong> {{ leave.updated_at|date:"d/m/Y H:i" }}<br>
+                    {% if leave.manager_approved_by %}
+                        <strong>Διαχειριστής:</strong> {{ leave.manager_approved_by.user.get_full_name|default:leave.manager_approved_by.user.email }}<br>
+                    {% elif leave.processed_by %}
+                        <strong>Διαχειριστής:</strong> {{ leave.processed_by.user.get_full_name|default:leave.processed_by.user.email }}<br>
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ακύρωση Αίτησης Άδειας</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Προσοχή</h6>
+                    <p class="mb-0">Είστε σίγουροι ότι θέλετε να ακυρώσετε αυτή την αίτηση άδειας;</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <strong>Τύπος:</strong> {{ leave.leave_type.eidos_adeias }}<br>
+                        <strong>Περίοδοι:</strong>
+                        {% for period in leave.periods.all %}
+                            {{ period.start_date|date:"d/m/Y" }} - {{ period.end_date|date:"d/m/Y" }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}<br>
+                        <strong>Συνολικές Ημέρες:</strong> {{ leave.total_days }}
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label for="cancel_reason" class="form-label">Λόγος Ακύρωσης (προαιρετικό)</label>
+                    <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" 
+                              placeholder="Αναφέρετε τον λόγο ακύρωσης της αίτησης"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Όχι, διατήρηση
+                </button>
+                <form method="post" action="#" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="cancel">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Ναι, ακύρωση
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 20px;
+    width: 2px;
+    height: 100%;
+    background-color: #dee2e6;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -27px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 3px #dee2e6;
+}
+
+.timeline-content {
+    padding-left: 10px;
+}
+
+.text-pink { color: #e91e63 !important; }
+.text-blue { color: #2196f3 !important; }
+
+@media print {
+    .btn, .card-header, .timeline, .modal {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .alert {
+        border: 1px solid #ddd !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-expand textareas
+document.querySelectorAll('textarea').forEach(function(textarea) {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+});
+
+// Print functionality
+function printLeave() {
+    window.print();
+}
+</script>
+{% endblock %}

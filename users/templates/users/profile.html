@@ -1,0 +1,413 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Προφίλ - Σύστημα Αδειών ΠΔΕΔΕ{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="bi bi-person-gear"></i> Προφίλ Χρήστη
+        </h2>
+        <p class="text-muted">Διαχειριστείτε τα στοιχεία και τις ρυθμίσεις του λογαριασμού σας</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Πίσω στο Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Profile Content -->
+<div class="row">
+    <!-- User Info -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-lines-fill"></i> Προσωπικά Στοιχεία
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Basic User Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_first_name" class="form-label">Όνομα</label>
+                            <input type="text" class="form-control" id="id_first_name" name="first_name" 
+                                   value="{{ user.first_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_last_name" class="form-label">Επώνυμο</label>
+                            <input type="text" class="form-control" id="id_last_name" name="last_name" 
+                                   value="{{ user.last_name }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="id_email" name="email" 
+                                   value="{{ user.email }}" readonly>
+                            <div class="form-text">Το email δεν μπορεί να αλλάξει</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_phone" class="form-label">Τηλέφωνο</label>
+                            <input type="tel" class="form-control" id="id_phone" name="phone" 
+                                   value="{{ user.employee.phone|default:'' }}" placeholder="+30 210 1234567">
+                        </div>
+                    </div>
+
+                    <!-- Employee Info -->
+                    <h6 class="text-primary mt-4 mb-3">Στοιχεία Υπαλλήλου</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_employee_id" class="form-label">Αριθμός Μητρώου</label>
+                            <input type="text" class="form-control" id="id_employee_id" name="employee_id" 
+                                   value="{{ user.employee.employee_id|default:'' }}" readonly>
+                            <div class="form-text">Συμπληρώνεται από τη διοίκηση</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_hire_date" class="form-label">Ημερομηνία Πρόσληψης</label>
+                            <input type="date" class="form-control" id="id_hire_date" name="hire_date" 
+                                   value="{{ user.employee.hire_date|date:'Y-m-d'|default:'' }}" readonly>
+                            <div class="form-text">Συμπληρώνεται από τη διοίκηση</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_department" class="form-label">Τμήμα</label>
+                            <input type="text" class="form-control" id="id_department" name="department" 
+                                   value="{{ user.employee.department|default:'' }}" readonly>
+                            <div class="form-text">Συμπληρώνεται από τη διοίκηση</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_position" class="form-label">Θέση</label>
+                            <input type="text" class="form-control" id="id_position" name="position" 
+                                   value="{{ user.employee.position|default:'' }}" readonly>
+                            <div class="form-text">Συμπληρώνεται από τη διοίκηση</div>
+                        </div>
+                    </div>
+
+                    <!-- Address Info -->
+                    <h6 class="text-primary mt-4 mb-3">Στοιχεία Διεύθυνσης</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="id_address" class="form-label">Διεύθυνση</label>
+                            <input type="text" class="form-control" id="id_address" name="address" 
+                                   value="{{ user.employee.address|default:'' }}" 
+                                   placeholder="Οδός, αριθμός">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="id_postal_code" class="form-label">Ταχυδρομικός Κώδικας</label>
+                            <input type="text" class="form-control" id="id_postal_code" name="postal_code" 
+                                   value="{{ user.employee.postal_code|default:'' }}" 
+                                   placeholder="12345">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_city" class="form-label">Πόλη</label>
+                            <input type="text" class="form-control" id="id_city" name="city" 
+                                   value="{{ user.employee.city|default:'' }}" 
+                                   placeholder="Αθήνα">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_country" class="form-label">Χώρα</label>
+                            <input type="text" class="form-control" id="id_country" name="country" 
+                                   value="{{ user.employee.country|default:'Ελλάδα' }}">
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <h6 class="text-primary mt-4 mb-3">Στοιχεία Έκτακτης Ανάγκης</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_emergency_contact_name" class="form-label">Όνομα Επικοινωνίας</label>
+                            <input type="text" class="form-control" id="id_emergency_contact_name" 
+                                   name="emergency_contact_name" 
+                                   value="{{ user.employee.emergency_contact_name|default:'' }}"
+                                   placeholder="Όνομα συγγενούς ή φίλου">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_emergency_contact_phone" class="form-label">Τηλέφωνο Επικοινωνίας</label>
+                            <input type="tel" class="form-control" id="id_emergency_contact_phone" 
+                                   name="emergency_contact_phone" 
+                                   value="{{ user.employee.emergency_contact_phone|default:'' }}"
+                                   placeholder="+30 210 1234567">
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Ακύρωση
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Αποθήκευση Αλλαγών
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Password Change -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-lock"></i> Αλλαγή Κωδικού Πρόσβασης
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="#" id="password-change-form">
+                    {% csrf_token %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Για την ασφάλεια του λογαριασμού σας, αλλάζετε τακτικά τον κωδικό πρόσβασης.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_old_password" class="form-label">Παλιός Κωδικός</label>
+                        <input type="password" class="form-control" id="id_old_password" 
+                               name="old_password" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_new_password1" class="form-label">Νέος Κωδικός</label>
+                            <input type="password" class="form-control" id="id_new_password1" 
+                                   name="new_password1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_new_password2" class="form-label">Επιβεβαίωση Νέου Κωδικού</label>
+                            <input type="password" class="form-control" id="id_new_password2" 
+                                   name="new_password2" required>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <small>
+                            <strong>Απαιτήσεις κωδικού:</strong>
+                            <ul class="mb-0">
+                                <li>Τουλάχιστον 8 χαρακτήρες</li>
+                                <li>Δεν μπορεί να είναι πολύ κοινός</li>
+                                <li>Δεν μπορεί να είναι εντελώς αριθμητικός</li>
+                            </ul>
+                        </small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-shield-check"></i> Αλλαγή Κωδικού
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Profile Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-person-circle"></i> Σύνοψη Προφίλ
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px; font-size: 32px;">
+                    <i class="bi bi-person"></i>
+                </div>
+                <h5>{{ user.get_full_name|default:user.email }}</h5>
+                <p class="text-muted">{{ user.employee.department|default:"Τμήμα" }}</p>
+                {% if user.employee.position %}
+                    <p class="text-muted">{{ user.employee.position }}</p>
+                {% endif %}
+                
+                <hr>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-success">{{ user.employee.get_leave_balance }}</h6>
+                        <small class="text-muted">Άδειες Διαθέσιμες</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Stats -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-up"></i> Στατιστικά Λογαριασμού
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Μέλος από:</span>
+                        <span class="fw-bold">{{ user.date_joined|date:"d/m/Y" }}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Τελευταία σύνδεση:</span>
+                        <span class="fw-bold">
+                            {% if user.last_login %}
+                                {{ user.last_login|date:"d/m/Y H:i" }}
+                            {% else %}
+                                Ποτέ
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Συνολικές αιτήσεις:</span>
+                        <span class="fw-bold">{{ total_leave_requests|default:0 }}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Εγκεκριμένες:</span>
+                        <span class="fw-bold text-success">{{ approved_requests|default:0 }}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Ποσοστό έγκρισης:</span>
+                        <span class="fw-bold text-info">
+                            {% if total_leave_requests > 0 %}
+                                {% widthratio approved_requests total_leave_requests 100 %}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Settings -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear"></i> Ρυθμίσεις Λογαριασμού
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <strong>Ειδοποιήσεις Email</strong>
+                            <br><small class="text-muted">Λήψη ειδοποιήσεων για αιτήσεις</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                        </div>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <strong>Ειδοποιήσεις Εγκρίσεων</strong>
+                            <br><small class="text-muted">Ειδοποιήσεις για εκκρεμείς εγκρίσεις</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="approvalNotifications" checked>
+                        </div>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <strong>Θέμα Interface</strong>
+                            <br><small class="text-muted">Ανοιχτό ή σκούρο θέμα</small>
+                        </div>
+                        <select class="form-select form-select-sm" style="width: auto;">
+                            <option value="light">Ανοιχτό</option>
+                            <option value="dark">Σκούρο</option>
+                            <option value="auto">Αυτόματο</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="bi bi-download"></i> Εξαγωγή Δεδομένων
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert-dismissible');
+        alerts.forEach(function(alert) {
+            var closeButton = alert.querySelector('.btn-close');
+            if (closeButton) {
+                closeButton.click();
+            }
+        });
+    }, 5000);
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('input[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(function(field) {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία.');
+        }
+    });
+
+    // Phone number formatting
+    const phoneInputs = document.querySelectorAll('input[type="tel"]');
+    phoneInputs.forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.startsWith('30')) {
+                value = '+' + value;
+            } else if (value.startsWith('2')) {
+                value = '+30' + value;
+            }
+            e.target.value = value;
+        });
+    });
+});
+</script>
+{% endblock %}
