@@ -213,8 +213,8 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if leave_request.leaverequestperiod_set.exists %}
-                        {% for period in leave_request.leaverequestperiod_set.all %}
+                    {% if leave_request.periods.exists %}
+                        {% for period in leave_request.periods.all %}
                             <div class="period-card p-3">
                                 <div class="row align-items-center">
                                     <div class="col-md-4">
@@ -228,7 +228,7 @@
                                     <div class="col-md-4">
                                         <strong>Διάρκεια:</strong><br>
                                         <span class="badge bg-secondary">
-                                            {% widthratio period.end_date|timeuntil:period.start_date 86400 1 %} ημέρες
+                                            {{ period.total_days }} ημέρες
                                         </span>
                                     </div>
                                 </div>

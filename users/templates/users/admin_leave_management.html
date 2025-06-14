@@ -178,18 +178,18 @@
                                         <span class="badge bg-info">{{ request.leave_type.eidos_adeias }}</span>
                                     </td>
                                     <td>
-                                        {% if request.leaverequestperiod_set.exists %}
-                                            {% with first_period=request.leaverequestperiod_set.first %}
+                                        {% if request.periods.exists %}
+                                            {% with first_period=request.periods.first %}
                                                 <small>
-                                                    {{ first_period.start_date|date:"d/m/Y" }} - 
+                                                    {{ first_period.start_date|date:"d/m/Y" }} -
                                                     {{ first_period.end_date|date:"d/m/Y" }}
                                                 </small>
-                                                {% if request.leaverequestperiod_set.count > 1 %}
-                                                    <br><small class="text-muted">+{{ request.leaverequestperiod_set.count|add:"-1" }} ακόμα</small>
+                                                {% if request.periods.count > 1 %}
+                                                    <br><small class="text-muted">+{{ request.periods.count|add:"-1" }} ακόμα</small>
                                                 {% endif %}
                                             {% endwith %}
                                         {% else %}
-                                            <small class="text-muted">Χωρίς περίοδο</small>
+                                            <small class="text-muted">Δεν έχουν οριστεί περίοδοι άδειας</small>
                                         {% endif %}
                                     </td>
                                     <td>
