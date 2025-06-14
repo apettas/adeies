@@ -1,0 +1,143 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: adeies_db
+    environment:
+      POSTGRES_DB: adeies_db
+      POSTGRES_USER: adeies_user
+      POSTGRES_PASSWORD: adeies_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - adeies_network
+    restart: unless-stopped
+
+  # Redis για caching και sessions
+  redis:
+    image: redis:7-alpine
+    container_name: adeies_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - adeies_network
+    restart: unless-stopped
+
+  # Django Application
+  web:
+    build: .
+    container_name: adeies_web
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_NAME=adeies_db
+      - DB_USER=adeies_user
+      - DB_PASSWORD=adeies_password
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - SECRET_KEY=django-insecure-docker-dev-key-change-in-production
+    volumes:
+      - .:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - adeies_network
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Nginx Reverse Proxy (για production)
+  nginx:
+    image: nginx:alpine
+    container_name: adeies_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - web
+    networks:
+      - adeies_network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Celery Worker για background tasks
+  celery:
+    build: .
+    container_name: adeies_celery
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_NAME=adeies_db
+      - DB_USER=adeies_user
+      - DB_PASSWORD=adeies_password
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - .:/app
+      - logs_volume:/app/logs
+    depends_on:
+      - db
+      - redis
+    networks:
+      - adeies_network
+    restart: unless-stopped
+    command: celery -A adeies worker -l info
+    profiles:
+      - production
+
+  # Celery Beat για scheduled tasks
+  celery-beat:
+    build: .
+    container_name: adeies_celery_beat
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_NAME=adeies_db
+      - DB_USER=adeies_user
+      - DB_PASSWORD=adeies_password
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - .:/app
+      - logs_volume:/app/logs
+    depends_on:
+      - db
+      - redis
+    networks:
+      - adeies_network
+    restart: unless-stopped
+    command: celery -A adeies beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+  logs_volume:
+
+networks:
+  adeies_network:
+    driver: bridge
