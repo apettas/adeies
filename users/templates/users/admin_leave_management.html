@@ -1,0 +1,306 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Διαχείριση Αιτήσεων Άδειας{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+    
+    .status-ΚΑΤΑΧΩΡΗΘΗΚΕ {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+    
+    .status-ΣΕ_ΕΠΕΞΕΡΓΑΣΙΑ {
+        background-color: #fff3e0;
+        color: #f57c00;
+        border: 1px solid #ffcc02;
+    }
+    
+    .status-ΕΓΚΡΙΘΗΚΕ {
+        background-color: #e8f5e8;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+    
+    .filter-card {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .admin-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .action-buttons .btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-users-cog me-2"></i>
+                    Διαχείριση Αιτήσεων Άδειας
+                </h1>
+                <p class="mb-0 opacity-75">Επεξεργασία και διαχείριση αιτήσεων άδειας από υπαλλήλους</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="stats-card p-3 text-center text-dark">
+                    <h3 class="text-primary mb-1">{{ total_pending }}</h3>
+                    <small>Εκκρεμείς Αιτήσεις</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Φίλτρα Αναζήτησης -->
+    <div class="filter-card p-3">
+        <h5 class="mb-3">
+            <i class="fas fa-filter me-2"></i>
+            Φίλτρα Αναζήτησης
+        </h5>
+        
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Αναζήτηση</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="search" 
+                       name="search" 
+                       value="{{ search_query }}"
+                       placeholder="Όνομα, επώνυμο, email ή αιτιολογία...">
+                <div class="form-text">Αναζήτηση σε όνομα, επώνυμο, email ή αιτιολογία</div>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="status" class="form-label">Κατάσταση</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Όλες οι καταστάσεις</option>
+                    {% for status in available_statuses %}
+                        <option value="{{ status.name }}" {% if status.name == status_filter %}selected{% endif %}>
+                            {{ status.description }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="btn-group w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>
+                        Αναζήτηση
+                    </button>
+                    <a href="{% url 'users:admin_leave_management' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>
+                        Καθαρισμός
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Αποτελέσματα -->
+    {% if leave_requests %}
+        <div class="card">
+            <div class="card-header bg-white">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Αιτήσεις Άδειας 
+                            <span class="badge bg-primary">{{ page_obj.paginator.count }}</span>
+                        </h5>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Υπάλληλος</th>
+                                <th>Τύπος Άδειας</th>
+                                <th>Περίοδος</th>
+                                <th>Κατάσταση</th>
+                                <th>Ημερομηνία</th>
+                                <th>Ενέργειες</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in leave_requests %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-primary">#{{ request.id }}</strong>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ request.employee.user.get_full_name }}</strong>
+                                        </div>
+                                        <small class="text-muted">{{ request.employee.user.email }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ request.leave_type.eidos_adeias }}</span>
+                                    </td>
+                                    <td>
+                                        {% if request.leaverequestperiod_set.exists %}
+                                            {% with first_period=request.leaverequestperiod_set.first %}
+                                                <small>
+                                                    {{ first_period.start_date|date:"d/m/Y" }} - 
+                                                    {{ first_period.end_date|date:"d/m/Y" }}
+                                                </small>
+                                                {% if request.leaverequestperiod_set.count > 1 %}
+                                                    <br><small class="text-muted">+{{ request.leaverequestperiod_set.count|add:"-1" }} ακόμα</small>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <small class="text-muted">Χωρίς περίοδο</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge status-badge status-{{ request.status.name }}">
+                                            {{ request.status.description }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>{{ request.created_at|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="{% url 'users:admin_leave_detail' request.pk %}" 
+                                               class="btn btn-sm btn-primary"
+                                               title="Επεξεργασία">
+                                                <i class="fas fa-edit"></i>
+                                                Επεξεργασία
+                                            </a>
+                                            
+                                            <a href="{% url 'users:leave_detail' request.pk %}" 
+                                               class="btn btn-sm btn-outline-info"
+                                               title="Προβολή"
+                                               target="_blank">
+                                                <i class="fas fa-eye"></i>
+                                                Προβολή
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <nav aria-label="Σελιδοποίηση" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Δεν βρέθηκαν αιτήσεις</h5>
+                <p class="text-muted">
+                    {% if search_query or status_filter %}
+                        Δεν υπάρχουν αιτήσεις που να ταιριάζουν με τα κριτήρια αναζήτησης.
+                    {% else %}
+                        Δεν υπάρχουν εκκρεμείς αιτήσεις άδειας προς επεξεργασία.
+                    {% endif %}
+                </p>
+                {% if search_query or status_filter %}
+                    <a href="{% url 'users:admin_leave_management' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-times me-1"></i>
+                        Καθαρισμός φίλτρων
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit form on status change
+        const statusSelect = document.getElementById('status');
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function() {
+                this.form.submit();
+            });
+        }
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

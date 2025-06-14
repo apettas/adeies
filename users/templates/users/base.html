@@ -71,6 +71,20 @@
                                 <i class="bi bi-plus-circle"></i> Νέα Άδεια
                             </a>
                         </li>
+                        
+                        <!-- Admin Leave Management Link for Leave Administrators -->
+                        {% if user.is_authenticated and user.employee %}
+                            {% for user_role in user.employee.userrole_set.all %}
+                                {% if user_role.is_active and user_role.role.name == "Χειριστής αδειών" %}
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'users:admin_leave_management' %}">
+                                            <i class="bi bi-kanban"></i> Διαχείριση Αδειών
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        
                         {% if user.is_staff %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'users:approval_list' %}">

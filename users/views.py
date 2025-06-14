@@ -8,9 +8,11 @@ from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.utils import timezone
-from .models import CustomUser, Employee
+from .models import CustomUser, Employee, UserRole
 from leave_app.models import LeaveRequest, LeaveStatus, LeaveType
 from django.db.models import Q
+from django.http import HttpResponse
+import os
 
 
 def home(request):
@@ -487,13 +489,231 @@ def leave_delete(request, pk):
         print(f"DEBUG: Διαγράφηκε η αίτηση {leave_id}")
         messages.success(request, f'Η αίτηση άδειας "{leave_type}" ({total_days} ημέρες) διαγράφηκε επιτυχώς.')
         return redirect('users:leave_list')
-    else:
-        print("DEBUG: Non-POST request, redirecting to list")
-        # GET request - επιβεβαίωση διαγραφής (δεν χρειάζεται template γιατί γίνεται μέσω modal)
-        return redirect('users:leave_list')
 
 
 @login_required
+def admin_leave_management(request):
+    """Διαχείριση αιτήσεων από χειριστή αδειών"""
+    try:
+        employee = request.user.employee
+        
+        # Έλεγχος αν ο χρήστης είναι "Χειριστής αδειών"
+        user_roles = UserRole.objects.filter(
+            employee=employee,
+            is_active=True,
+            role__name="Χειριστής αδειών"
+        )
+        
+        if not user_roles.exists():
+            messages.error(request, 'Δεν έχετε δικαίωμα πρόσβασης στη διαχείριση αιτήσεων.')
+            return redirect('users:dashboard')
+            
+        # Φίλτρα αναζήτησης
+        status_filter = request.GET.get('status', '')
+        search_query = request.GET.get('search', '')
+        
+        # Αιτήσεις που δεν είναι σε τελική κατάσταση
+        leave_requests = LeaveRequest.objects.filter(
+            status__is_final_status=False
+        ).select_related('employee__user', 'leave_type', 'status').order_by('-created_at')
+        
+        # Εφαρμογή φίλτρων
+        if status_filter:
+            leave_requests = leave_requests.filter(status__name=status_filter)
+            
+        if search_query:
+            leave_requests = leave_requests.filter(
+                Q(employee__user__first_name__icontains=search_query) |
+                Q(employee__user__last_name__icontains=search_query) |
+                Q(employee__user__email__icontains=search_query) |
+                Q(reason__icontains=search_query)
+            )
+        
+        # Pagination
+        paginator = Paginator(leave_requests, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        # Διαθέσιμες καταστάσεις για φίλτρο
+        available_statuses = LeaveStatus.objects.filter(
+            is_active=True,
+            is_final_status=False
+        ).order_by('name')
+        
+        context = {
+            'page_obj': page_obj,
+            'leave_requests': page_obj.object_list,
+            'available_statuses': available_statuses,
+            'status_filter': status_filter,
+            'search_query': search_query,
+            'total_pending': leave_requests.count(),
+        }
+        
+        return render(request, 'users/admin_leave_management.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Σφάλμα κατά τη φόρτωση της διαχείρισης αιτήσεων: {str(e)}')
+        return redirect('users:dashboard')
+
+
+@login_required
+def admin_leave_detail(request, pk):
+    """Λεπτομέρειες αίτησης για χειριστή αδειών"""
+    try:
+        employee = request.user.employee
+        
+        # Έλεγχος αν ο χρήστης είναι "Χειριστής αδειών"
+        user_roles = UserRole.objects.filter(
+            employee=employee,
+            is_active=True,
+            role__name="Χειριστής αδειών"
+        )
+        
+        if not user_roles.exists():
+            messages.error(request, 'Δεν έχετε δικαίωμα πρόσβασης στη διαχείριση αιτήσεων.')
+            return redirect('users:dashboard')
+            
+        leave_request = get_object_or_404(LeaveRequest, pk=pk)
+        
+        # Διαθέσιμες καταστάσεις για αλλαγή
+        available_statuses = LeaveStatus.objects.filter(
+            is_active=True
+        ).order_by('name')
+        
+        # Έλεγχος για αρχεία συνημμένων
+        import os
+        from django.conf import settings
+        
+        attachment_dir = os.path.join(settings.MEDIA_ROOT, 'leave_attachments', str(leave_request.id))
+        attachments = []
+        
+        if os.path.exists(attachment_dir):
+            for filename in os.listdir(attachment_dir):
+                file_path = os.path.join(attachment_dir, filename)
+                if os.path.isfile(file_path):
+                    file_size = os.path.getsize(file_path)
+                    attachments.append({
+                        'name': filename,
+                        'size': file_size,
+                        'size_mb': round(file_size / (1024 * 1024), 2)
+                    })
+        
+        context = {
+            'leave_request': leave_request,
+            'available_statuses': available_statuses,
+            'attachments': attachments,
+            'can_edit_status': not leave_request.status.is_final_status,
+        }
+        
+        return render(request, 'users/admin_leave_detail.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Σφάλμα κατά τη φόρτωση της αίτησης: {str(e)}')
+        return redirect('users:admin_leave_management')
+
+
+@login_required
+def admin_update_leave_status(request, pk):
+    """Ενημέρωση κατάστασης αίτησης από χειριστή"""
+    if request.method != 'POST':
+        return redirect('users:admin_leave_detail', pk=pk)
+        
+    try:
+        employee = request.user.employee
+        
+        # Έλεγχος αν ο χρήστης είναι "Χειριστής αδειών"
+        user_roles = UserRole.objects.filter(
+            employee=employee,
+            is_active=True,
+            role__name="Χειριστής αδειών"
+        )
+        
+        if not user_roles.exists():
+            messages.error(request, 'Δεν έχετε δικαίωμα επεξεργασίας αιτήσεων.')
+            return redirect('users:dashboard')
+            
+        leave_request = get_object_or_404(LeaveRequest, pk=pk)
+        
+        # Έλεγχος αν η αίτηση μπορεί να επεξεργαστεί
+        if leave_request.status.is_final_status:
+            messages.error(request, 'Δεν μπορείτε να επεξεργαστείτε αίτηση που βρίσκεται σε τελική κατάσταση.')
+            return redirect('users:admin_leave_detail', pk=pk)
+        
+        new_status_id = request.POST.get('new_status')
+        admin_notes = request.POST.get('admin_notes', '').strip()
+        
+        if not new_status_id:
+            messages.error(request, 'Παρακαλώ επιλέξτε νέα κατάσταση.')
+            return redirect('users:admin_leave_detail', pk=pk)
+            
+        try:
+            new_status = LeaveStatus.objects.get(id=new_status_id, is_active=True)
+        except LeaveStatus.DoesNotExist:
+            messages.error(request, 'Μη έγκυρη κατάσταση.')
+            return redirect('users:admin_leave_detail', pk=pk)
+        
+        # Ενημέρωση της αίτησης
+        old_status = leave_request.status
+        leave_request.status = new_status
+        
+        if admin_notes:
+            if leave_request.admin_notes:
+                leave_request.admin_notes += f"\n\n[{timezone.now().strftime('%d/%m/%Y %H:%M')}] {request.user.get_full_name()}: {admin_notes}"
+            else:
+                leave_request.admin_notes = f"[{timezone.now().strftime('%d/%m/%Y %H:%M')}] {request.user.get_full_name()}: {admin_notes}"
+        
+        leave_request.save()
+        
+        messages.success(request, f'Η κατάσταση της αίτησης άλλαξε από "{old_status.description}" σε "{new_status.description}".')
+        
+        return redirect('users:admin_leave_detail', pk=pk)
+        
+    except Exception as e:
+        messages.error(request, f'Σφάλμα κατά την ενημέρωση της αίτησης: {str(e)}')
+        return redirect('users:admin_leave_detail', pk=pk)
+
+
+@login_required
+def download_attachment(request, leave_id, filename):
+    """Κατέβασμα συνημμένου αρχείου"""
+    try:
+        # Έλεγχος αν το αρχείο υπάρχει
+        import os
+        from django.conf import settings
+        from django.http import FileResponse, Http404
+        
+        leave_request = get_object_or_404(LeaveRequest, pk=leave_id)
+        
+        # Έλεγχος δικαιωμάτων - ο χρήστης πρέπει να είναι ο ιδιοκτήτης ή χειριστής αδειών
+        if request.user.employee != leave_request.employee:
+            # Έλεγχος αν είναι χειριστής αδειών
+            user_roles = UserRole.objects.filter(
+                employee=request.user.employee,
+                is_active=True,
+                role__name="Χειριστής αδειών"
+            )
+            if not user_roles.exists():
+                messages.error(request, 'Δεν έχετε δικαίωμα πρόσβασης σε αυτό το αρχείο.')
+                return redirect('users:dashboard')
+        
+        # Δημιουργία του path για το αρχείο
+        file_path = os.path.join(settings.MEDIA_ROOT, 'leave_attachments', str(leave_id), filename)
+        
+        if not os.path.exists(file_path):
+            raise Http404("Το αρχείο δεν βρέθηκε")
+        
+        # Επιστροφή του αρχείου
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type='application/octet-stream'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f'Σφάλμα κατά το κατέβασμα του αρχείου: {str(e)}')
+        return redirect('users:leave_detail', pk=leave_id)
 def test_simple_delete(request, pk):
     """Απλή test view για debugging"""
     print(f"TEST_SIMPLE_DELETE: Called with pk={pk}, method={request.method}")

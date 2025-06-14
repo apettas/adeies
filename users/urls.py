@@ -23,6 +23,14 @@ urlpatterns = [
     path('leaves/new/', views.leave_create, name='leave_create'),
     path('leaves/<int:pk>/', views.leave_detail, name='leave_detail'),
     path('leaves/<int:pk>/delete/', views.leave_delete, name='leave_delete'),
+    
+    # Admin management URLs (using 'manage' prefix to avoid conflict with Django admin)
+    path('manage/leaves/', views.admin_leave_management, name='admin_leave_management'),
+    path('manage/leaves/<int:pk>/', views.admin_leave_detail, name='admin_leave_detail'),
+    path('manage/leaves/<int:pk>/update-status/', views.admin_update_leave_status, name='admin_update_leave_status'),
+    
+    # File download URL
+    path('leaves/<int:leave_id>/attachment/<str:filename>/', views.download_attachment, name='download_attachment'),
     path('leaves/<int:pk>/test-delete/', views.test_simple_delete, name='test_simple_delete'),
     
     # For managers/supervisors

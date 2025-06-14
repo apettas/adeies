@@ -1,0 +1,482 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Επεξεργασία Αίτησης #{{ leave_request.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+    
+    .status-ΚΑΤΑΧΩΡΗΘΗΚΕ {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+    
+    .status-ΣΕ_ΕΠΕΞΕΡΓΑΣΙΑ {
+        background-color: #fff3e0;
+        color: #f57c00;
+        border: 1px solid #ffcc02;
+    }
+    
+    .status-ΕΓΚΡΙΘΗΚΕ {
+        background-color: #e8f5e8;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+    
+    .admin-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-card .card-header {
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+    }
+    
+    .status-form {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .attachment-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .attachment-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .attachment-icon {
+        font-size: 2rem;
+        color: #6c757d;
+    }
+    
+    .period-card {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .back-btn {
+        background: linear-gradient(45deg, #6c757d, #495057);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        background: linear-gradient(45deg, #495057, #343a40);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .update-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .update-btn:hover {
+        background: linear-gradient(45deg, #20c997, #17a2b8);
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-edit me-2"></i>
+                    Επεξεργασία Αίτησης #{{ leave_request.id }}
+                </h1>
+                <p class="mb-0 opacity-75">Διαχείριση και ενημέρωση κατάστασης αίτησης άδειας</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'users:admin_leave_management' %}" class="btn back-btn">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Επιστροφή στη Λίστα
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <!-- Στοιχεία Αίτησης -->
+        <div class="col-lg-8">
+            <!-- Βασικές Πληροφορίες -->
+            <div class="info-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Στοιχεία Υπαλλήλου
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Ονοματεπώνυμο:</strong><br>
+                            <span class="text-primary">{{ leave_request.employee.user.get_full_name }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Email:</strong><br>
+                            <span class="text-muted">{{ leave_request.employee.user.email }}</span>
+                        </div>
+                    </div>
+                    
+                    {% if leave_request.employee.afm %}
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <strong>ΑΦΜ:</strong><br>
+                            <span class="text-muted">{{ leave_request.employee.afm }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Κλάδος:</strong><br>
+                            <span class="text-muted">{{ leave_request.employee.klados|default:"Δεν έχει οριστεί" }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Στοιχεία Άδειας -->
+            <div class="info-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Στοιχεία Άδειας
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Τύπος Άδειας:</strong><br>
+                            <span class="badge bg-info">{{ leave_request.leave_type.eidos_adeias }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Τρέχουσα Κατάσταση:</strong><br>
+                            <span class="badge status-badge status-{{ leave_request.status.name }}">
+                                {{ leave_request.status.description }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <strong>Ημερομηνία Υποβολής:</strong><br>
+                            <span class="text-muted">{{ leave_request.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Τελευταία Ενημέρωση:</strong><br>
+                            <span class="text-muted">{{ leave_request.updated_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Περίοδοι Άδειας -->
+            <div class="info-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-week me-2"></i>
+                        Περίοδοι Άδειας
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if leave_request.leaverequestperiod_set.exists %}
+                        {% for period in leave_request.leaverequestperiod_set.all %}
+                            <div class="period-card p-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <strong>Από:</strong><br>
+                                        <span class="text-primary">{{ period.start_date|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Έως:</strong><br>
+                                        <span class="text-primary">{{ period.end_date|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Διάρκεια:</strong><br>
+                                        <span class="badge bg-secondary">
+                                            {% widthratio period.end_date|timeuntil:period.start_date 86400 1 %} ημέρες
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                            <p>Δεν έχουν οριστεί περίοδοι άδειας</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Αιτιολογία -->
+            {% if leave_request.reason %}
+            <div class="info-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comment-alt me-2"></i>
+                        Αιτιολογία
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ leave_request.reason|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Συνημμένα Αρχεία -->
+            {% if attachments %}
+            <div class="info-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paperclip me-2"></i>
+                        Συνημμένα Αρχεία
+                        <span class="badge bg-primary">{{ attachments|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for attachment in attachments %}
+                            <div class="col-md-6 mb-3">
+                                <div class="attachment-card p-3 h-100">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <i class="fas fa-file attachment-icon"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ attachment.name }}</h6>
+                                            <small class="text-muted">
+                                                {{ attachment.size_mb }} MB
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <a href="{% url 'users:download_attachment' leave_request.id attachment.name %}" 
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Κατέβασμα">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Σημειώσεις Διαχειριστή -->
+            {% if leave_request.admin_notes %}
+            <div class="info-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sticky-note me-2"></i>
+                        Σημειώσεις Διαχειριστή
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="bg-light p-3 rounded">
+                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ leave_request.admin_notes }}</pre>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Πάνελ Ενεργειών -->
+        <div class="col-lg-4">
+            {% if can_edit_status %}
+            <!-- Φόρμα Ενημέρωσης Κατάστασης -->
+            <div class="status-form">
+                <h5 class="mb-3">
+                    <i class="fas fa-edit me-2"></i>
+                    Ενημέρωση Κατάστασης
+                </h5>
+                
+                <form method="post" action="{% url 'users:admin_update_leave_status' leave_request.pk %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="new_status" class="form-label">
+                            <strong>Νέα Κατάσταση</strong>
+                        </label>
+                        <select class="form-select" id="new_status" name="new_status" required>
+                            <option value="">Επιλέξτε κατάσταση...</option>
+                            {% for status in available_statuses %}
+                                <option value="{{ status.id }}" 
+                                        {% if status.id == leave_request.status.id %}selected{% endif %}>
+                                    {{ status.description }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="admin_notes" class="form-label">
+                            <strong>Σημειώσεις Διαχειριστή</strong>
+                        </label>
+                        <textarea class="form-control" 
+                                  id="admin_notes" 
+                                  name="admin_notes" 
+                                  rows="4"
+                                  placeholder="Προσθέστε σημειώσεις για την αλλαγή κατάστασης..."></textarea>
+                        <div class="form-text">
+                            Οι σημειώσεις θα προστεθούν στο ιστορικό της αίτησης
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn update-btn w-100">
+                        <i class="fas fa-save me-1"></i>
+                        Ενημέρωση Κατάστασης
+                    </button>
+                </form>
+            </div>
+            {% else %}
+            <div class="status-form">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Πληροφορίες
+                </h5>
+                <div class="alert alert-info">
+                    <i class="fas fa-lock me-2"></i>
+                    Η αίτηση βρίσκεται σε τελική κατάσταση και δεν μπορεί να επεξεργαστεί.
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Γρήγορες Ενέργειες -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Γρήγορες Ενέργειες
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'users:leave_detail' leave_request.pk %}" 
+                           class="btn btn-outline-primary btn-sm"
+                           target="_blank">
+                            <i class="fas fa-eye me-1"></i>
+                            Προβολή για Υπάλληλο
+                        </a>
+                        
+                        <a href="{% url 'users:admin_leave_management' %}?search={{ leave_request.employee.user.email }}" 
+                           class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-search me-1"></i>
+                            Άλλες Αιτήσεις Υπαλλήλου
+                        </a>
+                        
+                        {% if leave_request.employee.user.email %}
+                        <a href="mailto:{{ leave_request.employee.user.email }}?subject=Σχετικά με την αίτηση άδειας #{{ leave_request.id }}" 
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-envelope me-1"></i>
+                            Αποστολή Email
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Στατιστικά -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Πληροφορίες
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h6 class="text-primary mb-0">{{ leave_request.id }}</h6>
+                                <small class="text-muted">ID Αίτησης</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-success mb-0">
+                                {% if leave_request.leaverequestperiod_set.exists %}
+                                    {{ leave_request.leaverequestperiod_set.count }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">Περίοδοι</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-focus on status select
+        const statusSelect = document.getElementById('new_status');
+        if (statusSelect) {
+            statusSelect.focus();
+        }
+        
+        // Confirmation for status update
+        const updateForm = document.querySelector('form[action*="update-status"]');
+        if (updateForm) {
+            updateForm.addEventListener('submit', function(e) {
+                const newStatus = document.getElementById('new_status');
+                const currentStatusText = '{{ leave_request.status.description }}';
+                const newStatusText = newStatus.options[newStatus.selectedIndex].text;
+                
+                if (newStatus.value && newStatusText !== currentStatusText) {
+                    const confirmMessage = `Είστε σίγουροι ότι θέλετε να αλλάξετε την κατάσταση από "${currentStatusText}" σε "${newStatusText}";`;
+                    if (!confirm(confirmMessage)) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        }
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}
